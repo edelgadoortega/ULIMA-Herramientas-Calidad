@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulador de Hoja de Control</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar" aria-label="Acciones principales">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M9 11.5 11.2 14 16 8.5" /><path d="M6 3h9l3 3v15H6z" /><path d="M15 3v4h4" /></svg>
+            </span>
+            <span>Calidad en acción</span>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button" id="helpToggle" type="button" title="Mostrar ayuda contextual" aria-label="Mostrar ayuda contextual">
+              <svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 1 1 4.8 2.4c-.9.7-1.4 1.2-1.4 2.6" /><path d="M12 18h.01" /><circle cx="12" cy="12" r="9" /></svg>
+            </button>
+            <button class="icon-button" id="themeToggle" type="button" title="Cambiar modo oscuro" aria-label="Cambiar modo oscuro">
+              <svg viewBox="0 0 24 24"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z" /></svg>
+            </button>
+          </div>
+        </nav>
+        <div class="hero-content">
+          <p class="eyebrow">Herramientas de calidad y mejora continua</p>
+          <h1>Simulador de Hoja de Control</h1>
+          <p class="subtitle">Registra incidencias, analiza frecuencias e identifica oportunidades de mejora.</p>
+          <div class="hero-actions">
+            <button class="primary-button" id="loadCaseHero" type="button">
+              <svg viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5z" /><path d="M8 7h6" /><path d="M8 11h8" /></svg>
+              Cargar Caso de Estudio
+            </button>
+            <button class="secondary-button" id="printHero" type="button">
+              <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v7H6z" /></svg>
+              Imprimir reporte
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="section-card" aria-labelledby="process-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M4 6h6" /><path d="M14 6h6" /><path d="M4 12h10" /><path d="M18 12h2" /><path d="M4 18h3" /><path d="M11 18h9" /><circle cx="12" cy="6" r="2" /><circle cx="16" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 1</p>
+              <h2 id="process-title">Definición del proceso</h2>
+            </div>
+            <button class="help-chip" type="button" data-help="Define el alcance de la observación: proceso, periodo, responsable y objetivo. Una hoja de control es más útil cuando el contexto de captura queda claro.">?</button>
+          </div>
+          <div class="form-grid">
+            <label>Nombre del proceso<input id="processName" type="text" placeholder="Atención de solicitudes" /></label>
+            <label>Responsable<input id="ownerName" type="text" placeholder="Equipo de calidad" /></label>
+            <label>Fecha de inicio<input id="startDate" type="date" /></label>
+            <label>Fecha de fin<input id="endDate" type="date" /></label>
+            <label class="wide">Objetivo de la observación<textarea id="objective" rows="3" placeholder="Identificar las incidencias más frecuentes durante la atención."></textarea></label>
+          </div>
+        </section>
+
+        <section class="section-card" aria-labelledby="categories-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" /><path d="M3 6h.01" /><path d="M3 12h.01" /><path d="M3 18h.01" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 2</p>
+              <h2 id="categories-title">Configuración de categorías</h2>
+            </div>
+            <button class="help-chip" type="button" data-help="Las categorías representan los tipos de defectos, errores o incidencias que se observarán. Deben ser claras, mutuamente entendibles y fáciles de marcar.">?</button>
+          </div>
+          <div class="category-tools">
+            <input id="categoryInput" type="text" placeholder="Nueva categoría" />
+            <button class="primary-button" id="addCategory" type="button">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+              Agregar categoría
+            </button>
+          </div>
+          <div id="categoryList" class="category-list" aria-live="polite"></div>
+        </section>
+
+        <section class="section-card" aria-labelledby="record-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 3</p>
+              <h2 id="record-title">Registro de incidencias</h2>
+            </div>
+            <button class="help-chip" type="button" data-help="Cada registro equivale a una observación real del proceso. Al guardar una incidencia, la frecuencia por categoría se actualiza automáticamente.">?</button>
+          </div>
+          <form id="incidentForm" class="form-grid compact">
+            <label>Fecha<input id="incidentDate" type="date" required /></label>
+            <label>Hora<input id="incidentTime" type="time" required /></label>
+            <label>Categoría<select id="incidentCategory" required></select></label>
+            <label class="wide">Observación<input id="incidentNote" type="text" placeholder="Detalle breve de la incidencia" /></label>
+            <button class="primary-button wide" type="submit">
+              <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
+              Registrar incidencia
+            </button>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Hora</th><th>Categoría</th><th>Observación</th><th></th></tr></thead>
+              <tbody id="incidentTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="split-grid">
+          <article class="section-card" aria-labelledby="sheet-title">
+            <div class="section-heading">
+              <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z" /><path d="M3 9h18" /><path d="M9 21V9" /></svg></span>
+              <div>
+                <p class="section-kicker">Sección 4</p>
+                <h2 id="sheet-title">Hoja de Control Automática</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Categoría</th><th>Frecuencia</th></tr></thead>
+                <tbody id="summaryTable"></tbody>
+              </table>
+            </div>
+            <div class="summary-stats">
+              <p><strong>Total de incidencias:</strong> <span id="totalIncidents">0</span></p>
+              <p><strong>Categoría más frecuente:</strong> <span id="topCategory">Sin datos</span></p>
+              <p><strong>Categoría menos frecuente:</strong> <span id="lowCategory">Sin datos</span></p>
+            </div>
+          </article>
+
+          <article class="section-card" aria-labelledby="dashboard-title">
+            <div class="section-heading">
+              <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="M7 16v-5" /><path d="M12 16V7" /><path d="M17 16v-8" /></svg></span>
+              <div>
+                <p class="section-kicker">Sección 5</p>
+                <h2 id="dashboard-title">Dashboard de análisis</h2>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <div class="metric"><span>Total</span><strong id="metricTotal">0</strong></div>
+              <div class="metric"><span>Categorías</span><strong id="metricCategories">0</strong></div>
+              <div class="metric"><span>Más frecuente</span><strong id="metricTop">Sin datos</strong></div>
+              <div class="metric"><span>Participación principal</span><strong id="metricShare">0%</strong></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="section-card" aria-labelledby="charts-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5" /><path d="M4 19h16" /><path d="M8 16V9" /><path d="M13 16V6" /><path d="M18 16v-4" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 6</p>
+              <h2 id="charts-title">Visualización gráfica</h2>
+            </div>
+          </div>
+          <div class="chart-grid">
+            <div class="chart-panel"><canvas id="barChart" aria-label="Gráfico de barras de frecuencia por categoría"></canvas></div>
+            <div class="chart-panel"><canvas id="pieChart" aria-label="Gráfico circular de distribución porcentual"></canvas></div>
+          </div>
+        </section>
+
+        <section class="section-card" aria-labelledby="interpretation-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path d="M8 9h8" /><path d="M8 13h6" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 7</p>
+              <h2 id="interpretation-title">Interpretación automática</h2>
+            </div>
+          </div>
+          <p id="autoConclusion" class="conclusion">Registra incidencias o carga el caso de estudio para generar conclusiones automáticas.</p>
+        </section>
+
+        <section class="section-card" aria-labelledby="pareto-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M3 20h18" /><path d="M6 16V8" /><path d="M11 16V4" /><path d="M16 16v-6" /><path d="M21 16v-2" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 8</p>
+              <h2 id="pareto-title">Preparación para Pareto</h2>
+            </div>
+          </div>
+          <button class="primary-button" id="generatePareto" type="button">
+            <svg viewBox="0 0 24 24"><path d="M4 19V5" /><path d="M4 19h16" /><path d="m7 14 4-4 3 3 5-6" /></svg>
+            Generar datos para Pareto
+          </button>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Categoría</th><th>Frecuencia</th><th>%</th><th>% Acumulado</th></tr></thead>
+              <tbody id="paretoTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section-card accent-card" aria-labelledby="case-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" /><path d="M8 8h8" /><path d="M8 12h8" /><path d="M8 16h5" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 9</p>
+              <h2 id="case-title">Actividad de aprendizaje</h2>
+            </div>
+          </div>
+          <p><strong>Caso:</strong> Proceso de Gestión Aduanera. Objetivo: Identificar las incidencias más frecuentes.</p>
+          <button class="primary-button" id="loadCase" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+            Cargar Caso de Estudio
+          </button>
+        </section>
+
+        <section class="section-card" aria-labelledby="reflection-title">
+          <div class="section-heading">
+            <span class="section-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg></span>
+            <div>
+              <p class="section-kicker">Sección 10</p>
+              <h2 id="reflection-title">Retroalimentación educativa</h2>
+            </div>
+          </div>
+          <div class="reflection-grid">
+            <label>¿Cuál fue la incidencia más frecuente?<textarea rows="2"></textarea></label>
+            <label>¿Qué información proporciona la hoja de control?<textarea rows="2"></textarea></label>
+            <label>¿Qué herramienta de calidad utilizarías después?<textarea rows="2"></textarea></label>
+            <label>¿Qué acción de mejora propondrías?<textarea rows="2"></textarea></label>
+          </div>
+        </section>
+
+        <section class="action-dock" aria-label="Acciones de la simulación">
+          <button class="secondary-button" id="exportExcel" type="button"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m8 13 4 4 4-4" /><path d="M12 17V9" /></svg>Exportar Excel</button>
+          <button class="secondary-button" id="exportPdf" type="button"><svg viewBox="0 0 24 24"><path d="M6 9V2h9l3 3v4" /><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>Exportar PDF</button>
+          <button class="secondary-button" id="saveSession" type="button"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>Guardar sesión</button>
+          <button class="danger-button" id="resetSimulation" type="button"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 3v6h6" /></svg>Reiniciar</button>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

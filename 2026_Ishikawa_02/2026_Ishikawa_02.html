@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador Diagrama de Ishikawa - 6M</title>
+  <style>
+    :root {
+      --azul: #2563eb;
+      --azul-oscuro: #1e3a8a;
+      --gris: #f3f4f6;
+      --texto: #1f2937;
+      --borde: #d1d5db;
+      --rojo: #dc2626;
+      --verde: #16a34a;
+      --amarillo: #facc15;
+      --blanco: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--texto);
+      background:
+        linear-gradient(120deg, rgba(15,23,42,.82), rgba(30,64,175,.64)),
+        url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80");
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+    }
+
+    .contenedor {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .encabezado {
+      background: linear-gradient(135deg, rgba(30,58,138,.94), rgba(37,99,235,.88), rgba(56,189,248,.78));
+      color: white;
+      padding: 32px;
+      border-radius: 26px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,.35);
+      backdrop-filter: blur(8px);
+    }
+
+    .encabezado h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+
+    .encabezado p {
+      margin: 0;
+      line-height: 1.5;
+      font-size: 16px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.94);
+      border-radius: 22px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.18);
+      border: 1px solid rgba(255,255,255,.55);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      color: var(--azul-oscuro);
+      font-size: 22px;
+    }
+
+    .ayuda {
+      background: #eff6ff;
+      border-left: 5px solid var(--azul);
+      padding: 12px 14px;
+      border-radius: 10px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      font-size: 15px;
+      background: white;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .grid-6m {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 18px;
+    }
+
+    .tarjeta-m {
+      border: 1px solid var(--borde);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fafafa;
+    }
+
+    .tarjeta-m h3 {
+      margin-top: 0;
+      color: var(--azul-oscuro);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pregunta-guia {
+      font-size: 13px;
+      line-height: 1.4;
+      color: #4b5563;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    .causa {
+      background: white;
+      border: 1px solid var(--borde);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .causa-prioritaria {
+      border: 2px solid var(--rojo);
+      background: #fff1f2;
+    }
+
+    .fila-causa {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .acciones-causa {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+
+    .btn {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .btn-primario {
+      background: var(--azul);
+      color: white;
+    }
+
+    .btn-secundario {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .btn-peligro {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-verde {
+      background: var(--verde);
+      color: white;
+    }
+
+    .botonera {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: white;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    th, td {
+      border: 1px solid var(--borde);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: #dbeafe;
+      color: #1e3a8a;
+    }
+
+    .prioridad-si {
+      color: var(--rojo);
+      font-weight: bold;
+    }
+
+    .diagrama-wrap {
+      overflow-x: auto;
+      background: #ffffff;
+      border: 1px solid var(--borde);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    svg {
+      min-width: 1180px;
+      width: 100%;
+      height: 760px;
+      display: block;
+    }
+
+    .nota {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.5;
+    }
+
+    .leyenda {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--borde);
+    }
+
+    .color-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+      .btn, .botonera, .acciones-causa {
+        display: none !important;
+      }
+      .panel, .encabezado {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <section class="encabezado">
+      <h1>Simulador del Diagrama de Ishikawa - 6M</h1>
+      <p>
+        Identifica un problema de proceso, registra sus posibles causas según las 6M,
+        selecciona las causas prioritarias y genera automáticamente el diagrama causa-efecto.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>1. Define el problema o efecto</h2>
+      <div class="ayuda">
+        Escribe el resultado no deseado que deseas analizar. Debe ser concreto, observable y relacionado con un proceso.
+      </div>
+      <label for="problema">Problema o efecto</label>
+      <input id="problema" type="text" value="Demora en la atención de solicitudes" />
+    </section>
+
+    <section class="panel">
+      <h2>2. Registra causas por cada una de las 6M</h2>
+      <div class="ayuda">
+        En cada categoría puedes agregar causas. Marca como prioritaria aquella causa que consideres más importante
+        por su impacto, frecuencia o evidencia disponible.
+      </div>
+
+      <div id="contenedor6m" class="grid-6m"></div>
+
+      <div class="botonera">
+        <button class="btn btn-primario" onclick="generarDiagrama()">Generar diagrama</button>
+        <button class="btn btn-verde" onclick="cargarEjemplo()">Cargar ejemplo</button>
+        <button class="btn btn-secundario" onclick="limpiarTodo()">Limpiar todo</button>
+        <button class="btn btn-secundario" onclick="window.print()">Imprimir / guardar PDF</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>3. Tabla de análisis de causas</h2>
+      <p class="nota">
+        Esta tabla resume las causas registradas. Las causas prioritarias aparecerán resaltadas en rojo en el diagrama.
+      </p>
+      <div id="tablaResumen"></div>
+    </section>
+
+    <section class="panel">
+      <h2>4. Diagrama de Ishikawa generado</h2>
+      <div class="leyenda">
+        <span class="chip"><span class="color-box" style="background:#2563eb"></span>Causa registrada</span>
+        <span class="chip"><span class="color-box" style="background:#dc2626"></span>Causa prioritaria</span>
+      </div>
+      <div class="diagrama-wrap">
+        <svg id="diagrama" viewBox="0 0 1180 760" role="img" aria-label="Diagrama de Ishikawa"></svg>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>5. Reflexión final</h2>
+      <label for="reflexion">Explica por qué seleccionaste la causa prioritaria y qué acción de mejora propones</label>
+      <textarea id="reflexion" placeholder="Ejemplo: Se priorizó la falta de validación inicial porque genera reprocesos. Se propone implementar una lista de verificación digital antes de admitir la solicitud."></textarea>
+    </section>
+  </main>
+
+  <script>
+    const categorias = [
+      {
+        id: "metodo",
+        nombre: "Método",
+        guia: "¿El procedimiento está mal diseñado, no está documentado, está desactualizado o no se cumple?"
+      },
+      {
+        id: "manoObra",
+        nombre: "Mano de obra",
+        guia: "¿Hay falta de capacitación, sobrecarga laboral, errores humanos o roles poco claros?"
+      },
+      {
+        id: "maquina",
+        nombre: "Máquina / Tecnología",
+        guia: "¿Existen fallas en equipos, sistemas, aplicativos, conectividad o herramientas digitales?"
+      },
+      {
+        id: "materiales",
+        nombre: "Materiales / Insumos",
+        guia: "¿Los documentos, datos, formatos, insumos o información de entrada son incompletos o incorrectos?"
+      },
+      {
+        id: "medicion",
+        nombre: "Medición",
+        guia: "¿Los indicadores, controles, registros o mecanismos de seguimiento son insuficientes?"
+      },
+      {
+        id: "medioAmbiente",
+        nombre: "Medio ambiente / Entorno",
+        guia: "¿El entorno físico, normativo, organizacional o cultural afecta la ejecución del proceso?"
+      }
+    ];
+
+    let causas = {};
+
+    function inicializar() {
+      categorias.forEach(cat => {
+        causas[cat.id] = [
+          { texto: "", evidencia: "", impacto: "Medio", prioritaria: false }
+        ];
+      });
+      renderFormulario();
+      generarDiagrama();
+    }
+
+    function renderFormulario() {
+      const contenedor = document.getElementById("contenedor6m");
+      contenedor.innerHTML = "";
+
+      categorias.forEach(cat => {
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "tarjeta-m";
+
+        const causasHtml = causas[cat.id].map((causa, index) => `
+          <div class="causa ${causa.prioritaria ? "causa-prioritaria" : ""}">
+            <div class="fila-causa">
+              <input type="text" value="${escapar(causa.texto)}" placeholder="Escribe una causa" 
+                oninput="actualizarCausa('${cat.id}', ${index}, 'texto', this.value)">
+              <button class="btn btn-peligro" onclick="eliminarCausa('${cat.id}', ${index})">X</button>
+            </div>
+            <label>Evidencia o dato de soporte</label>
+            <input type="text" value="${escapar(causa.evidencia)}" placeholder="Ejemplo: 35 reclamos, 4 días de demora, reprocesos frecuentes" 
+              oninput="actualizarCausa('${cat.id}', ${index}, 'evidencia', this.value)">
+            <br><br>
+            <label>Nivel de impacto</label>
+            <select onchange="actualizarCausa('${cat.id}', ${index}, 'impacto', this.value)">
+              <option ${causa.impacto === "Bajo" ? "selected" : ""}>Bajo</option>
+              <option ${causa.impacto === "Medio" ? "selected" : ""}>Medio</option>
+              <option ${causa.impacto === "Alto" ? "selected" : ""}>Alto</option>
+            </select>
+            <br><br>
+            <div class="acciones-causa">
+              <input type="checkbox" ${causa.prioritaria ? "checked" : ""} 
+                onchange="actualizarCausa('${cat.id}', ${index}, 'prioritaria', this.checked)">
+              <span>Marcar como causa prioritaria</span>
+            </div>
+          </div>
+        `).join("");
+
+        tarjeta.innerHTML = `
+          <h3>${cat.nombre}</h3>
+          <div class="pregunta-guia">${cat.guia}</div>
+          ${causasHtml}
+          <button class="btn btn-secundario" onclick="agregarCausa('${cat.id}')">+ Agregar causa</button>
+        `;
+
+        contenedor.appendChild(tarjeta);
+      });
+    }
+
+    function escapar(texto) {
+      return String(texto || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function actualizarCausa(catId, index, campo, valor) {
+      causas[catId][index][campo] = valor;
+      if (campo === "prioritaria") renderFormulario();
+      generarDiagrama();
+    }
+
+    function agregarCausa(catId) {
+      causas[catId].push({ texto: "", evidencia: "", impacto: "Medio", prioritaria: false });
+      renderFormulario();
+      generarDiagrama();
+    }
+
+    function eliminarCausa(catId, index) {
+      causas[catId].splice(index, 1);
+      if (causas[catId].length === 0) {
+        causas[catId].push({ texto: "", evidencia: "", impacto: "Medio", prioritaria: false });
+      }
+      renderFormulario();
+      generarDiagrama();
+    }
+
+    function obtenerCausasValidas() {
+      const lista = [];
+      categorias.forEach(cat => {
+        causas[cat.id].forEach(causa => {
+          if (causa.texto.trim() !== "") {
+            lista.push({ categoria: cat.nombre, ...causa });
+          }
+        });
+      });
+      return lista;
+    }
+
+    function generarTabla() {
+      const lista = obtenerCausasValidas();
+      const contenedor = document.getElementById("tablaResumen");
+
+      if (lista.length === 0) {
+        contenedor.innerHTML = "<p class='nota'>Aún no se han registrado causas.</p>";
+        return;
+      }
+
+      contenedor.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>6M</th>
+              <th>Causa identificada</th>
+              <th>Evidencia</th>
+              <th>Impacto</th>
+              <th>Prioritaria</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lista.map(item => `
+              <tr>
+                <td>${escapar(item.categoria)}</td>
+                <td>${escapar(item.texto)}</td>
+                <td>${escapar(item.evidencia || "Sin evidencia registrada")}</td>
+                <td>${escapar(item.impacto)}</td>
+                <td class="${item.prioritaria ? "prioridad-si" : ""}">${item.prioritaria ? "Sí" : "No"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function generarDiagrama() {
+      generarTabla();
+
+      const problema = document.getElementById("problema").value.trim() || "Problema no definido";
+      const svg = document.getElementById("diagrama");
+      svg.innerHTML = "";
+
+      const NS = "http://www.w3.org/2000/svg";
+      const crear = (tag, attrs = {}) => {
+        const el = document.createElementNS(NS, tag);
+        Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        return el;
+      };
+
+      const texto = (x, y, contenido, attrs = {}) => {
+        const t = crear("text", { x, y, ...attrs });
+        t.textContent = contenido;
+        svg.appendChild(t);
+        return t;
+      };
+
+      const linea = (x1, y1, x2, y2, attrs = {}) => {
+        const l = crear("line", { x1, y1, x2, y2, ...attrs });
+        svg.appendChild(l);
+        return l;
+      };
+
+      const rect = (x, y, width, height, attrs = {}) => {
+        const r = crear("rect", { x, y, width, height, rx: 14, ry: 14, ...attrs });
+        svg.appendChild(r);
+        return r;
+      };
+
+      linea(120, 380, 900, 380, { stroke: "#1f2937", "stroke-width": 5, "stroke-linecap": "round" });
+      linea(900, 380, 990, 320, { stroke: "#1f2937", "stroke-width": 5, "stroke-linecap": "round" });
+      linea(900, 380, 990, 440, { stroke: "#1f2937", "stroke-width": 5, "stroke-linecap": "round" });
+
+      rect(960, 305, 190, 150, { fill: "#dbeafe", stroke: "#1e3a8a", "stroke-width": 2 });
+      texto(1055, 344, "PROBLEMA", { "text-anchor": "middle", "font-size": 15, "font-weight": "bold", fill: "#1e3a8a" });
+      wrapText(svg, problema, 1055, 375, 158, 17, { "text-anchor": "middle", "font-size": 14, fill: "#111827" });
+
+      const posiciones = [
+        { cat: categorias[0], x1: 260, y1: 380, x2: 140, y2: 170, lado: "arriba" },
+        { cat: categorias[1], x1: 500, y1: 380, x2: 385, y2: 170, lado: "arriba" },
+        { cat: categorias[2], x1: 740, y1: 380, x2: 630, y2: 170, lado: "arriba" },
+        { cat: categorias[3], x1: 260, y1: 380, x2: 140, y2: 590, lado: "abajo" },
+        { cat: categorias[4], x1: 500, y1: 380, x2: 385, y2: 590, lado: "abajo" },
+        { cat: categorias[5], x1: 740, y1: 380, x2: 630, y2: 590, lado: "abajo" }
+      ];
+
+      posiciones.forEach(pos => {
+        linea(pos.x1, pos.y1, pos.x2, pos.y2, { stroke: "#1f2937", "stroke-width": 3, "stroke-linecap": "round" });
+        rect(pos.x2 - 78, pos.y2 - 30, 175, 38, { fill: "#eff6ff", stroke: "#2563eb", "stroke-width": 1.5 });
+        texto(pos.x2 + 10, pos.y2 - 6, pos.cat.nombre, { "text-anchor": "middle", "font-size": 14, "font-weight": "bold", fill: "#1e3a8a" });
+
+        const lista = causas[pos.cat.id].filter(c => c.texto.trim() !== "").slice(0, 5);
+
+        lista.forEach((causa, i) => {
+          const color = causa.prioritaria ? "#dc2626" : "#2563eb";
+          const baseX = pos.x2 + 45;
+          const baseY = pos.lado === "arriba" ? pos.y2 + 36 : pos.y2 - 36;
+          const nivelY = pos.lado === "arriba" ? baseY + i * 38 : baseY - i * 38;
+          const inicioX = baseX + i * 18;
+          const finX = inicioX - 58;
+          const finY = pos.lado === "arriba" ? nivelY + 28 : nivelY - 28;
+
+          linea(inicioX, nivelY, finX, finY, { stroke: color, "stroke-width": 2.2, "stroke-linecap": "round" });
+
+          const labelX = finX - 8;
+          const labelY = pos.lado === "arriba" ? finY + 4 : finY - 7;
+          const etiqueta = causa.texto.length > 42 ? causa.texto.substring(0, 39) + "..." : causa.texto;
+
+          texto(labelX, labelY, `• ${etiqueta}`, {
+            "font-size": 13,
+            fill: color,
+            "font-weight": causa.prioritaria ? "bold" : "normal",
+            "text-anchor": "end"
+          });
+        });
+      });
+
+      texto(590, 730, "Nota: se muestran hasta 5 causas por categoría en niveles separados para evitar superposición. Todas las causas aparecen en la tabla de análisis.", {
+        "text-anchor": "middle",
+        "font-size": 13,
+        fill: "#4b5563"
+      });
+    }
+
+    function wrapText(svg, text, x, y, maxWidth, lineHeight, attrs = {}) {
+      const NS = "http://www.w3.org/2000/svg";
+      const words = text.split(/\s+/);
+      let line = "";
+      let lineNumber = 0;
+      const textEl = document.createElementNS(NS, "text");
+      Object.entries(attrs).forEach(([k, v]) => textEl.setAttribute(k, v));
+      textEl.setAttribute("x", x);
+      textEl.setAttribute("y", y);
+      svg.appendChild(textEl);
+
+      words.forEach((word, i) => {
+        const testLine = line + word + " ";
+        const temp = document.createElementNS(NS, "tspan");
+        temp.textContent = testLine;
+        textEl.appendChild(temp);
+        const width = temp.getComputedTextLength();
+        textEl.removeChild(temp);
+
+        if (width > maxWidth && i > 0) {
+          const tspan = document.createElementNS(NS, "tspan");
+          tspan.setAttribute("x", x);
+          tspan.setAttribute("dy", lineNumber === 0 ? 0 : lineHeight);
+          tspan.textContent = line.trim();
+          textEl.appendChild(tspan);
+          line = word + " ";
+          lineNumber++;
+        } else {
+          line = testLine;
+        }
+      });
+
+      const tspan = document.createElementNS(NS, "tspan");
+      tspan.setAttribute("x", x);
+      tspan.setAttribute("dy", lineNumber === 0 ? 0 : lineHeight);
+      tspan.textContent = line.trim();
+      textEl.appendChild(tspan);
+    }
+
+    function cargarEjemplo() {
+      document.getElementById("problema").value = "Demora en la atención de solicitudes";
+      causas = {
+        metodo: [
+          { texto: "Procedimiento no actualizado", evidencia: "El flujo real no coincide con el procedimiento", impacto: "Alto", prioritaria: true },
+          { texto: "Falta de checklist de revisión", evidencia: "Se devuelven expedientes por omisiones", impacto: "Alto", prioritaria: true }
+        ],
+        manoObra: [
+          { texto: "Personal nuevo sin capacitación suficiente", evidencia: "Errores frecuentes en la admisión", impacto: "Medio", prioritaria: false },
+          { texto: "Sobrecarga en horas punta", evidencia: "Mayor cola entre 10:00 y 12:00", impacto: "Medio", prioritaria: false }
+        ],
+        maquina: [
+          { texto: "Sistema lento en el registro", evidencia: "Tiempo promedio de carga superior a 2 minutos", impacto: "Alto", prioritaria: false }
+        ],
+        materiales: [
+          { texto: "Formatos incompletos", evidencia: "Usuarios presentan solicitudes sin anexos", impacto: "Alto", prioritaria: true },
+          { texto: "Información de requisitos poco clara", evidencia: "Consultas repetidas sobre documentos", impacto: "Medio", prioritaria: false }
+        ],
+        medicion: [
+          { texto: "No se mide tiempo por etapa", evidencia: "Solo existe fecha de ingreso y salida", impacto: "Medio", prioritaria: false }
+        ],
+        medioAmbiente: [
+          { texto: "Cambios normativos no comunicados oportunamente", evidencia: "Criterios distintos entre revisores", impacto: "Medio", prioritaria: false }
+        ]
+      };
+      renderFormulario();
+      generarDiagrama();
+    }
+
+    function limpiarTodo() {
+      document.getElementById("problema").value = "";
+      document.getElementById("reflexion").value = "";
+      categorias.forEach(cat => {
+        causas[cat.id] = [{ texto: "", evidencia: "", impacto: "Medio", prioritaria: false }];
+      });
+      renderFormulario();
+      generarDiagrama();
+    }
+
+    inicializar();
+  </script>
+</body>
+</html>

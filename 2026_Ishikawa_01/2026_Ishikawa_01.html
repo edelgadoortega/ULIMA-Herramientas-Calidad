@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulador Ishikawa - Seis M</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2433;
+      --muted: #657084;
+      --line: #d8dee8;
+      --panel: #ffffff;
+      --page: #f4f7fb;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b91c1c;
+      --success: #047857;
+      --focus: #2563eb;
+      --shadow: 0 12px 32px rgba(30, 41, 59, .11);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      padding: 18px 0 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      max-width: 820px;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 13px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
+    }
+
+    .btn:hover {
+      border-color: #9aa6b8;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn.warning {
+      border-color: #d6a15d;
+      background: #fff8ed;
+      color: #7c3e04;
+    }
+
+    .problem {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(250px, .8fr);
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brief,
+    .scorebox {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .brief h2,
+    .scorebox h2,
+    .cause-bank h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .brief p {
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    .score {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 4px 0 8px;
+    }
+
+    .score strong {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .status {
+      min-height: 44px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(270px, 340px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .cause-bank {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .hintline {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.4;
+    }
+
+    .cards {
+      display: grid;
+      gap: 10px;
+      min-height: 64px;
+    }
+
+    .cause-card {
+      display: block;
+      width: 100%;
+      min-height: 56px;
+      border: 1px solid #cdd5e1;
+      border-left: 5px solid #64748b;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      text-align: left;
+      line-height: 1.35;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
+    }
+
+    .cause-card:focus-visible,
+    .btn:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, .35);
+      outline-offset: 2px;
+    }
+
+    .cause-card.dragging {
+      opacity: .55;
+      cursor: grabbing;
+    }
+
+    .cause-card.selected {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .2);
+    }
+
+    .cause-card.correct {
+      border-color: #8bd3ae;
+      border-left-color: var(--success);
+      background: #f0fdf4;
+    }
+
+    .cause-card.wrong {
+      border-color: #f2a6a6;
+      border-left-color: var(--danger);
+      background: #fff1f2;
+    }
+
+    .fishbone {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .category {
+      min-height: 230px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .category header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      color: #fff;
+    }
+
+    .category h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .category small {
+      white-space: nowrap;
+      opacity: .9;
+    }
+
+    .category[data-cat="mano"] header { background: #0f766e; }
+    .category[data-cat="metodo"] header { background: #7c3aed; }
+    .category[data-cat="maquina"] header { background: #b45309; }
+    .category[data-cat="material"] header { background: #be123c; }
+    .category[data-cat="medicion"] header { background: #2563eb; }
+    .category[data-cat="medio"] header { background: #475569; }
+
+    .dropzone {
+      min-height: 178px;
+      padding: 12px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      background:
+        linear-gradient(90deg, transparent 31px, rgba(15, 23, 42, .05) 32px),
+        linear-gradient(transparent 31px, rgba(15, 23, 42, .05) 32px);
+      background-size: 32px 32px;
+    }
+
+    .dropzone.over {
+      outline: 3px solid rgba(15, 118, 110, .28);
+      outline-offset: -5px;
+      background-color: #ecfeff;
+    }
+
+    .empty {
+      color: #7a869a;
+      border: 1px dashed #c4ccda;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      line-height: 1.35;
+      background: rgba(255, 255, 255, .72);
+    }
+
+    .feedback {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .feedback-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px 14px;
+      line-height: 1.45;
+    }
+
+    .feedback-item strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 1040px) {
+      .topbar,
+      .problem,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .cause-bank {
+        position: static;
+        max-height: none;
+      }
+
+      .fishbone {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        padding: 14px;
+      }
+
+      .fishbone {
+        grid-template-columns: 1fr;
+      }
+
+      .category {
+        min-height: 190px;
+      }
+
+      .dropzone {
+        min-height: 136px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar" aria-labelledby="title">
+      <div>
+        <h1 id="title">Simulador de Diagrama de Ishikawa</h1>
+        <p class="lead">Clasifica las causas del problema según las seis M. Puedes arrastrar cada tarjeta o seleccionarla y luego tocar una categoría.</p>
+      </div>
+      <div class="toolbar" aria-label="Controles del simulador">
+        <button class="btn warning" id="hintBtn" type="button">Pista</button>
+        <button class="btn" id="resetBtn" type="button">Reiniciar</button>
+        <button class="btn primary" id="checkBtn" type="button">Validar respuestas</button>
+      </div>
+    </section>
+
+    <section class="problem" aria-label="Caso de estudio">
+      <article class="brief">
+        <h2>Problema del proceso</h2>
+        <p><strong>Línea de envasado de jugo natural:</strong> durante el último mes, el 12% de botellas salió con nivel de llenado incorrecto, etiqueta mal alineada o tapa con fuga. El equipo debe identificar qué tipo de causa está detrás de cada situación para construir un Ishikawa útil.</p>
+      </article>
+      <aside class="scorebox" aria-live="polite">
+        <h2>Resultado</h2>
+        <div class="score"><strong id="score">0</strong><span>/ 18 causas</span></div>
+        <p class="status" id="status">Ordena todas las tarjetas y valida cuando termines.</p>
+      </aside>
+    </section>
+
+    <section class="workspace">
+      <aside class="cause-bank" aria-labelledby="bankTitle">
+        <h2 id="bankTitle">Causas por clasificar</h2>
+        <p class="hintline">Consejo: piensa si la causa proviene de personas, forma de trabajo, equipo, insumos, medición o entorno.</p>
+        <div class="cards dropzone" id="bank" data-zone="bank" aria-label="Banco de causas"></div>
+      </aside>
+
+      <section class="fishbone" aria-label="Categorías de las seis M">
+        <article class="category" data-cat="mano">
+          <header><h3>Mano de obra</h3><small>Personas</small></header>
+          <div class="dropzone" data-zone="mano"></div>
+        </article>
+        <article class="category" data-cat="metodo">
+          <header><h3>Método</h3><small>Procedimiento</small></header>
+          <div class="dropzone" data-zone="metodo"></div>
+        </article>
+        <article class="category" data-cat="maquina">
+          <header><h3>Máquina</h3><small>Equipos</small></header>
+          <div class="dropzone" data-zone="maquina"></div>
+        </article>
+        <article class="category" data-cat="material">
+          <header><h3>Material</h3><small>Insumos</small></header>
+          <div class="dropzone" data-zone="material"></div>
+        </article>
+        <article class="category" data-cat="medicion">
+          <header><h3>Medición</h3><small>Control</small></header>
+          <div class="dropzone" data-zone="medicion"></div>
+        </article>
+        <article class="category" data-cat="medio">
+          <header><h3>Medio ambiente</h3><small>Entorno</small></header>
+          <div class="dropzone" data-zone="medio"></div>
+        </article>
+      </section>
+    </section>
+
+    <section class="feedback" id="feedback" aria-live="polite"></section>
+  </main>
+
+  <script>
+    const causes = [
+      { id: "c1", text: "Operario nuevo no recibió entrenamiento completo sobre ajuste de boquillas.", cat: "mano" },
+      { id: "c2", text: "El supervisor no revisa la primera corrida después del cambio de formato.", cat: "mano" },
+      { id: "c3", text: "Rotación frecuente de personal en el turno noche.", cat: "mano" },
+      { id: "c4", text: "No existe una secuencia estándar para calibrar la llenadora al iniciar el lote.", cat: "metodo" },
+      { id: "c5", text: "La limpieza entre sabores se realiza con tiempos distintos según el turno.", cat: "metodo" },
+      { id: "c6", text: "El instructivo de cambio de etiquetas está desactualizado.", cat: "metodo" },
+      { id: "c7", text: "Boquillas de llenado con desgaste y goteo intermitente.", cat: "maquina" },
+      { id: "c8", text: "Sensor de posición de etiqueta pierde señal cuando aumenta la velocidad.", cat: "maquina" },
+      { id: "c9", text: "Taponadora con torque inestable por falta de mantenimiento preventivo.", cat: "maquina" },
+      { id: "c10", text: "Botellas de proveedor alterno llegan con pequeñas variaciones de altura.", cat: "material" },
+      { id: "c11", text: "Tapas con lote de sellos internos más rígidos de lo habitual.", cat: "material" },
+      { id: "c12", text: "Etiquetas con adhesivo débil cuando el envase está frío.", cat: "material" },
+      { id: "c13", text: "Balanza de verificación no fue calibrada en la fecha programada.", cat: "medicion" },
+      { id: "c14", text: "La muestra de control se toma cada dos horas, pero el defecto aparece en arranques.", cat: "medicion" },
+      { id: "c15", text: "Formato de registro no diferencia fuga de tapa y derrame por sobrellenado.", cat: "medicion" },
+      { id: "c16", text: "Alta humedad en el área reduce la adherencia de algunas etiquetas.", cat: "medio" },
+      { id: "c17", text: "Vibración de una compresora cercana afecta el alineamiento de la banda.", cat: "medio" },
+      { id: "c18", text: "Temperatura baja del almacén condensa humedad en las botellas.", cat: "medio" }
+    ];
+
+    const labels = {
+      mano: "Mano de obra",
+      metodo: "Método",
+      maquina: "Máquina",
+      material: "Material",
+      medicion: "Medición",
+      medio: "Medio ambiente"
+    };
+
+    const bank = document.querySelector("#bank");
+    const zones = [...document.querySelectorAll(".dropzone")];
+    const scoreEl = document.querySelector("#score");
+    const statusEl = document.querySelector("#status");
+    const feedbackEl = document.querySelector("#feedback");
+    const checkBtn = document.querySelector("#checkBtn");
+    const resetBtn = document.querySelector("#resetBtn");
+    const hintBtn = document.querySelector("#hintBtn");
+    let selectedCard = null;
+
+    function shuffle(items) {
+      return [...items].sort(() => Math.random() - 0.5);
+    }
+
+    function makeCard(cause) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "cause-card";
+      card.draggable = true;
+      card.id = cause.id;
+      card.dataset.correct = cause.cat;
+      card.textContent = cause.text;
+      card.addEventListener("dragstart", onDragStart);
+      card.addEventListener("dragend", onDragEnd);
+      card.addEventListener("click", () => selectCard(card));
+      return card;
+    }
+
+    function render() {
+      zones.forEach(zone => zone.innerHTML = "");
+      shuffle(causes).forEach(cause => bank.appendChild(makeCard(cause)));
+      selectedCard = null;
+      feedbackEl.innerHTML = "";
+      scoreEl.textContent = "0";
+      statusEl.textContent = "Ordena todas las tarjetas y valida cuando termines.";
+      refreshEmptyStates();
+    }
+
+    function refreshEmptyStates() {
+      zones.forEach(zone => {
+        const hasCards = zone.querySelector(".cause-card");
+        const empty = zone.querySelector(".empty");
+        if (!hasCards && !empty) {
+          const message = document.createElement("div");
+          message.className = "empty";
+          message.textContent = zone.dataset.zone === "bank" ? "Arrastra causas aquí para retirarlas de una categoría." : "Suelta aquí las causas de esta categoría.";
+          zone.appendChild(message);
+        }
+        if (hasCards && empty) empty.remove();
+      });
+    }
+
+    function selectCard(card) {
+      document.querySelectorAll(".cause-card.selected").forEach(item => item.classList.remove("selected"));
+      selectedCard = selectedCard === card ? null : card;
+      if (selectedCard) selectedCard.classList.add("selected");
+    }
+
+    function moveCard(card, zone) {
+      card.classList.remove("correct", "wrong", "selected");
+      const empty = zone.querySelector(".empty");
+      if (empty) empty.remove();
+      zone.appendChild(card);
+      selectedCard = null;
+      refreshEmptyStates();
+      statusEl.textContent = "Sigue clasificando o valida tus respuestas.";
+    }
+
+    function onDragStart(event) {
+      event.dataTransfer.setData("text/plain", event.target.id);
+      event.target.classList.add("dragging");
+    }
+
+    function onDragEnd(event) {
+      event.target.classList.remove("dragging");
+      zones.forEach(zone => zone.classList.remove("over"));
+    }
+
+    zones.forEach(zone => {
+      zone.addEventListener("dragover", event => {
+        event.preventDefault();
+        zone.classList.add("over");
+      });
+      zone.addEventListener("dragleave", () => zone.classList.remove("over"));
+      zone.addEventListener("drop", event => {
+        event.preventDefault();
+        zone.classList.remove("over");
+        const id = event.dataTransfer.getData("text/plain");
+        const card = document.getElementById(id);
+        if (card) moveCard(card, zone);
+      });
+      zone.addEventListener("click", event => {
+        if (!selectedCard || event.target.closest(".cause-card")) return;
+        moveCard(selectedCard, zone);
+      });
+    });
+
+    function validate() {
+      const placed = [...document.querySelectorAll(".fishbone .cause-card")];
+      const allCards = [...document.querySelectorAll(".cause-card")];
+      let correct = 0;
+      const mistakes = [];
+
+      allCards.forEach(card => card.classList.remove("correct", "wrong"));
+
+      placed.forEach(card => {
+        const zone = card.closest(".dropzone").dataset.zone;
+        if (zone === card.dataset.correct) {
+          correct += 1;
+          card.classList.add("correct");
+        } else {
+          card.classList.add("wrong");
+          mistakes.push({
+            text: card.textContent,
+            current: labels[zone],
+            expected: labels[card.dataset.correct]
+          });
+        }
+      });
+
+      const unplaced = causes.length - placed.length;
+      scoreEl.textContent = String(correct);
+      feedbackEl.innerHTML = "";
+
+      if (unplaced > 0) {
+        statusEl.textContent = `Todavía faltan ${unplaced} causa(s) por clasificar.`;
+      } else if (mistakes.length === 0) {
+        statusEl.textContent = "Excelente: todas las causas están en la M correspondiente.";
+      } else {
+        statusEl.textContent = `Hay ${mistakes.length} causa(s) que conviene revisar.`;
+      }
+
+      mistakes.slice(0, 6).forEach(item => {
+        const div = document.createElement("div");
+        div.className = "feedback-item";
+        div.innerHTML = `<strong>Revisa:</strong> ${item.text}<br><strong>Ubicada en:</strong> ${item.current}. <strong>Corresponde a:</strong> ${item.expected}.`;
+        feedbackEl.appendChild(div);
+      });
+
+      if (mistakes.length > 6) {
+        const div = document.createElement("div");
+        div.className = "feedback-item";
+        div.textContent = `Además hay ${mistakes.length - 6} causa(s) incorrecta(s). Corrige estas primero y vuelve a validar.`;
+        feedbackEl.appendChild(div);
+      }
+    }
+
+    function showHint() {
+      const hints = [
+        "Mano de obra: habilidades, capacitación, fatiga, supervisión o disponibilidad de personas.",
+        "Método: pasos, instrucciones, secuencia, estandarización y forma de ejecutar el trabajo.",
+        "Máquina: estado, ajuste, mantenimiento, sensores, herramientas y equipos del proceso.",
+        "Material: variación o condición de insumos, piezas, materia prima, envases o consumibles.",
+        "Medición: instrumentos, frecuencia de control, registros, criterios de inspección y datos.",
+        "Medio ambiente: temperatura, humedad, vibración, iluminación, ruido o condiciones del área."
+      ];
+      statusEl.textContent = hints[Math.floor(Math.random() * hints.length)];
+    }
+
+    checkBtn.addEventListener("click", validate);
+    resetBtn.addEventListener("click", render);
+    hintBtn.addEventListener("click", showHint);
+
+    render();
+  </script>
+</body>
+</html>

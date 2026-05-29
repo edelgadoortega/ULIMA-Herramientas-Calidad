@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador de Histograma - Mantenimiento Vehicular</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --blue: #0f6fb6;
+      --blue-dark: #0b3855;
+      --green: #14a66a;
+      --orange: #f59e0b;
+      --purple: #7c3aed;
+      --red: #dc4545;
+      --gray: #60717d;
+      --line: #d9e5eb;
+      --bg: #eef6f8;
+      --card: rgba(255, 255, 255, 0.93);
+      --text: #102f3f;
+      --muted: #60717d;
+      --shadow: 0 18px 48px rgba(16, 47, 63, 0.16);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 80% 8%, rgba(245, 158, 11, 0.22), transparent 24rem),
+        radial-gradient(circle at 10% 20%, rgba(20, 166, 106, 0.2), transparent 22rem),
+        linear-gradient(135deg, rgba(238, 246, 248, 0.92), rgba(238, 246, 248, 0.98)),
+        repeating-linear-gradient(90deg, rgba(15, 111, 182, 0.06) 0 2px, transparent 2px 88px);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.42;
+      background:
+        linear-gradient(130deg, transparent 0 55%, rgba(15, 111, 182, 0.16) 55% 56%, transparent 56%),
+        linear-gradient(28deg, transparent 0 62%, rgba(20, 166, 106, 0.16) 62% 63%, transparent 63%),
+        radial-gradient(circle at 82% 72%, rgba(16, 47, 63, 0.08), transparent 16rem);
+      pointer-events: none;
+    }
+
+    button, input, textarea { font: inherit; }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .shell {
+      width: min(1220px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 34px;
+    }
+
+    .hero {
+      min-height: 58vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .hero-copy, .visual-panel, .card, .dock {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-copy {
+      display: grid;
+      align-content: center;
+      padding: 34px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 0.82rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 12ch;
+      color: var(--blue-dark);
+      font-size: clamp(2.45rem, 6vw, 5.5rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 680px;
+      margin: 18px 0 26px;
+      color: var(--muted);
+      font-size: 1.14rem;
+    }
+
+    .hero-actions, .button-row, .dock, .section-title, .sigma-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .visual-panel {
+      position: relative;
+      min-height: 380px;
+      overflow: hidden;
+      background:
+        linear-gradient(160deg, rgba(15, 111, 182, 0.92), rgba(20, 166, 106, 0.78)),
+        linear-gradient(90deg, #0f6fb6, #14a66a);
+    }
+
+    .visual-panel::before {
+      content: "🚗";
+      position: absolute;
+      right: 26px;
+      bottom: 14px;
+      font-size: clamp(6rem, 16vw, 13rem);
+      opacity: 0.28;
+      filter: saturate(0.85);
+    }
+
+    .visual-card {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      top: 24px;
+      padding: 18px;
+      border-radius: var(--radius);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .mini-histogram {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items: end;
+      gap: 8px;
+      height: 150px;
+      margin-top: 20px;
+    }
+
+    .mini-histogram span {
+      display: block;
+      border-radius: 5px 5px 0 0;
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .primary, .secondary, .danger {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-weight: 850;
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      box-shadow: 0 10px 24px rgba(15, 111, 182, 0.22);
+    }
+
+    .secondary {
+      color: var(--blue-dark);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .danger {
+      color: #fff;
+      background: var(--red);
+    }
+
+    main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+    }
+
+    .section-title {
+      margin-bottom: 16px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 1.22rem;
+    }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border-radius: var(--radius);
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--orange));
+      font-size: 1.2rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(15, 111, 182, 0.12);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 18px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      min-height: 102px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .stat strong {
+      color: var(--blue-dark);
+      font-size: clamp(1.05rem, 1.8vw, 1.55rem);
+      overflow-wrap: anywhere;
+    }
+
+    .chart-box {
+      height: 520px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .chart-box canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .sigma-meter {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .sigma-bar {
+      position: relative;
+      height: 18px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--red), var(--orange), var(--green));
+    }
+
+    .sigma-pointer {
+      position: absolute;
+      top: -5px;
+      width: 4px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--blue-dark);
+      transform: translateX(-50%);
+    }
+
+    .sigma-chip {
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      color: var(--blue-dark);
+      border: 1px solid var(--line);
+      background: #f8fbfc;
+      font-weight: 850;
+    }
+
+    .interpretation {
+      margin: 0;
+      padding: 18px;
+      border-left: 5px solid var(--green);
+      border-radius: var(--radius);
+      background: rgba(20, 166, 106, 0.1);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .questions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .dock {
+      position: sticky;
+      bottom: 12px;
+      z-index: 10;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      max-width: min(380px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      color: #fff;
+      background: #102f3f;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: 0.2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      .hero, .two-col, .grid, .stats-grid, .questions {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: auto;
+      }
+
+      .visual-panel {
+        min-height: 300px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1220px); }
+      .hero-copy, .card { padding: 18px; }
+      .button-row, .hero-actions, .dock { align-items: stretch; flex-direction: column; }
+      .chart-box { height: 440px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <section class="hero-copy">
+        <p class="eyebrow">Gestión por procesos | Calidad | Estadística aplicada</p>
+        <h1>Simulador de Histograma</h1>
+        <p class="subtitle">Analiza la variabilidad del kilometraje real al ingreso de mantenimiento preventivo cada 5,000 km.</p>
+        <div class="hero-actions">
+          <button class="primary" id="heroGenerate" type="button">📊 Generar simulación</button>
+          <button class="secondary" id="heroMedium" type="button">⚙️ Variabilidad media</button>
+        </div>
+      </section>
+      <aside class="visual-panel" aria-label="Visual de mantenimiento y análisis">
+        <div class="visual-card">
+          <strong>Proceso esperado: 5,000 km</strong>
+          <p>El histograma permite observar concentración, dispersión y valores fuera del rango aceptable.</p>
+          <div class="mini-histogram" aria-hidden="true">
+            <span style="height:18%"></span><span style="height:28%"></span><span style="height:40%"></span><span style="height:62%"></span><span style="height:86%"></span><span style="height:100%"></span><span style="height:94%"></span><span style="height:70%"></span><span style="height:44%"></span><span style="height:31%"></span><span style="height:19%"></span><span style="height:12%"></span>
+          </div>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-title"><span class="icon">🛠️</span><h2>1. Panel de configuración</h2></div>
+        <div class="grid">
+          <label>Media esperada<input id="meanInput" type="number" value="5000" step="1"></label>
+          <label>Desviación estándar<input id="stdInput" type="number" value="150" min="1" step="1"></label>
+          <label>Tamaño de muestra<input id="sampleInput" type="number" value="100" min="2" step="1"></label>
+          <label>Número de intervalos<input id="binsInput" type="number" value="10" min="3" max="30" step="1"></label>
+          <label>Límite inferior aceptable<input id="lowerInput" type="number" value="4500" step="1"></label>
+          <label>Límite superior aceptable<input id="upperInput" type="number" value="5500" step="1"></label>
+        </div>
+        <div class="button-row" style="margin-top:16px">
+          <button class="primary" id="generateBtn" type="button">📊 Generar simulación</button>
+          <button class="secondary" id="lowVarBtn" type="button">✅ Baja variabilidad</button>
+          <button class="secondary" id="mediumVarBtn" type="button">⚙️ Variabilidad media</button>
+          <button class="secondary" id="highVarBtn" type="button">⚠️ Alta variabilidad</button>
+          <button class="danger" id="clearBtn" type="button">🧹 Limpiar datos</button>
+        </div>
+      </section>
+
+      <section class="two-col">
+        <article class="card">
+          <div class="section-title"><span class="icon">✍️</span><h2>2. Datos editables</h2></div>
+          <label>Lista de kilometrajes
+            <textarea id="dataText" placeholder="Pega o escribe datos separados por coma, punto y coma, espacio o salto de línea. Ejemplo: 4850, 5020, 5180"></textarea>
+          </label>
+          <div class="grid" style="grid-template-columns: 1fr 1fr; margin-top:14px">
+            <label>Nuevo dato<input id="singleDataInput" type="number" placeholder="Ej. 5020"></label>
+            <label>Dato seleccionado<select id="dataSelect"></select></label>
+          </div>
+          <div class="button-row" style="margin-top:14px">
+            <button class="primary" id="updateDataBtn" type="button">🔄 Actualizar histograma con mis datos</button>
+            <button class="secondary" id="addDataBtn" type="button">➕ Agregar dato</button>
+            <button class="danger" id="deleteDataBtn" type="button">🗑️ Eliminar dato seleccionado</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="section-title"><span class="icon">📈</span><h2>3. Estadísticos del proceso</h2></div>
+          <div class="stats-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+            <div class="stat"><span>Cantidad de datos</span><strong id="nStat">0</strong></div>
+            <div class="stat"><span>Media muestral</span><strong id="meanStat">0</strong></div>
+            <div class="stat"><span>Mediana</span><strong id="medianStat">0</strong></div>
+            <div class="stat"><span>Intervalo modal</span><strong id="modeStat">Sin datos</strong></div>
+            <div class="stat"><span>Desv. estándar muestral</span><strong id="stdStat">0</strong></div>
+            <div class="stat"><span>Coef. de variación</span><strong id="cvStat">0%</strong></div>
+            <div class="stat"><span>Mínimo / máximo</span><strong id="minMaxStat">0 / 0</strong></div>
+            <div class="stat"><span>Rango</span><strong id="rangeStat">0</strong></div>
+            <div class="stat"><span>Dentro de límites</span><strong id="insideStat">0%</strong></div>
+            <div class="stat"><span>Fuera de límites</span><strong id="outsideStat">0%</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">σ</span><h2>4. Indicador de sigmas</h2></div>
+        <div class="sigma-meter">
+          <div class="sigma-row">
+            <span class="sigma-chip">±1σ: variabilidad alta si muchos datos salen del centro</span>
+            <span class="sigma-chip">±2σ: proceso moderadamente disperso</span>
+            <span class="sigma-chip">±3σ: mayor cobertura esperada</span>
+          </div>
+          <div class="sigma-bar" aria-label="Nivel sigma aproximado">
+            <span class="sigma-pointer" id="sigmaPointer" style="left:0%"></span>
+          </div>
+          <p id="sigmaText" class="interpretation">Genera datos para calcular el nivel sigma aproximado.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">📊</span><h2>5. Histograma con curva normal aproximada</h2></div>
+        <div class="chart-box"><canvas id="histogramChart"></canvas></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">💡</span><h2>6. Interpretación automática</h2></div>
+        <p id="interpretation" class="interpretation">Genera una simulación para obtener una interpretación del comportamiento del proceso.</p>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">🎓</span><h2>7. Actividad pedagógica</h2></div>
+        <div class="questions">
+          <label>¿Qué ocurre con la forma del histograma cuando aumenta la desviación estándar?<textarea></textarea></label>
+          <label>¿Qué significa que los datos estén más concentrados alrededor de 5,000 km?<textarea></textarea></label>
+          <label>¿Qué riesgo existe si muchos vehículos superan los 5,500 km antes del mantenimiento?<textarea></textarea></label>
+          <label>¿Qué acción de mejora propondrías para reducir la variabilidad?<textarea></textarea></label>
+          <label>¿Qué diferencia observas entre una simulación de baja y alta variabilidad?<textarea></textarea></label>
+        </div>
+      </section>
+
+      <section class="dock" aria-label="Acciones rápidas">
+        <button class="primary" id="dockGenerate" type="button">📊 Generar simulación</button>
+        <button class="secondary" id="dockUpdate" type="button">🔄 Actualizar con mis datos</button>
+        <button class="secondary" onclick="window.print()" type="button">🖨️ Imprimir reporte</button>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Estado principal del simulador. Cada valor representa kilometraje real de ingreso a mantenimiento.
+    const state = {
+      data: [],
+      chart: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const referencePlugin = {
+      id: "referenceLines",
+      afterDatasetsDraw(chart, args, options) {
+        const refs = options.references || [];
+        const { ctx, chartArea } = chart;
+        if (!chartArea || !refs.length) return;
+        const min = options.minX;
+        const max = options.maxX;
+        ctx.save();
+        refs.forEach((ref) => {
+          if (ref.value < min || ref.value > max) return;
+          const x = chartArea.left + ((ref.value - min) / (max - min)) * chartArea.width;
+          ctx.beginPath();
+          ctx.moveTo(x, chartArea.top);
+          ctx.lineTo(x, chartArea.bottom);
+          ctx.strokeStyle = ref.color;
+          ctx.lineWidth = ref.width || 2;
+          ctx.setLineDash(ref.dash || []);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.translate(x + 4, chartArea.top + 12);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillStyle = ref.color;
+          ctx.font = "700 11px system-ui";
+          ctx.fillText(ref.label, 0, 0);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        });
+        ctx.restore();
+      }
+    };
+
+    Chart.register(referencePlugin);
+
+    function toast(message) {
+      const node = $("toast");
+      node.textContent = message;
+      node.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 2500);
+    }
+
+    // Generación normal con Box-Muller, tal como se usa en simulaciones básicas.
+    function generarNormal(media, desviacion) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return media + desviacion * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function config() {
+      return {
+        mean: Number($("meanInput").value),
+        std: Math.max(1, Number($("stdInput").value)),
+        sample: Math.max(2, Math.round(Number($("sampleInput").value))),
+        bins: Math.max(3, Math.round(Number($("binsInput").value))),
+        lower: Number($("lowerInput").value),
+        upper: Number($("upperInput").value)
+      };
+    }
+
+    function generateSimulation() {
+      const cfg = config();
+      state.data = Array.from({ length: cfg.sample }, () => Math.round(generarNormal(cfg.mean, cfg.std)));
+      syncTextFromData();
+      renderAll();
+      toast("Simulación generada.");
+    }
+
+    function parseDataText() {
+      return $("dataText").value
+        .split(/[\s,;]+/)
+        .map((item) => Number(item.trim()))
+        .filter((value) => Number.isFinite(value));
+    }
+
+    function syncTextFromData() {
+      $("dataText").value = state.data.join(", ");
+    }
+
+    function updateFromText() {
+      const parsed = parseDataText();
+      if (parsed.length < 2) return toast("Ingresa al menos dos datos válidos.");
+      state.data = parsed.map((value) => Math.round(value));
+      syncTextFromData();
+      renderAll();
+      toast("Histograma actualizado con tus datos.");
+    }
+
+    function addData() {
+      const value = Number($("singleDataInput").value);
+      if (!Number.isFinite(value)) return toast("Escribe un kilometraje válido.");
+      state.data.push(Math.round(value));
+      $("singleDataInput").value = "";
+      syncTextFromData();
+      renderAll();
+    }
+
+    function deleteSelectedData() {
+      const index = Number($("dataSelect").value);
+      if (!Number.isInteger(index) || index < 0) return toast("Selecciona un dato para eliminar.");
+      state.data.splice(index, 1);
+      syncTextFromData();
+      renderAll();
+    }
+
+    function clearData() {
+      state.data = [];
+      syncTextFromData();
+      renderAll();
+      toast("Datos limpiados.");
+    }
+
+    function stats(data) {
+      if (data.length < 2) return null;
+      const sorted = [...data].sort((a, b) => a - b);
+      const n = data.length;
+      const mean = data.reduce((sum, value) => sum + value, 0) / n;
+      const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+      const variance = data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / (n - 1);
+      const std = Math.sqrt(variance);
+      const min = sorted[0];
+      const max = sorted[n - 1];
+      return { n, mean, median, std, min, max, range: max - min, cv: std / mean };
+    }
+
+    function histogram(data, binCount) {
+      if (!data.length) return { bins: [], min: 0, max: 1, width: 1, modal: "Sin datos" };
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const width = Math.max(1, Math.ceil((max - min || 1) / binCount));
+      const bins = Array.from({ length: binCount }, (_, i) => ({
+        start: min + i * width,
+        end: i === binCount - 1 ? max : min + (i + 1) * width,
+        mid: min + i * width + width / 2,
+        count: 0
+      }));
+      data.forEach((value) => {
+        const index = Math.min(binCount - 1, Math.max(0, Math.floor((value - min) / width)));
+        bins[index].count += 1;
+      });
+      const modalBin = [...bins].sort((a, b) => b.count - a.count)[0];
+      return { bins, min, max, width, modal: `${Math.round(modalBin.start)} - ${Math.round(modalBin.end)} km` };
+    }
+
+    function normalPdf(x, mean, std) {
+      return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+    }
+
+    function fmt(value, decimals = 1) {
+      if (!Number.isFinite(value)) return "0";
+      return value.toLocaleString("es-PE", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+    }
+
+    function renderDataSelect() {
+      $("dataSelect").innerHTML = state.data.length
+        ? state.data.map((value, index) => `<option value="${index}">${index + 1}. ${value} km</option>`).join("")
+        : `<option value="-1">Sin datos</option>`;
+    }
+
+    function renderStats() {
+      const cfg = config();
+      const st = stats(state.data);
+      if (!st) {
+        ["nStat", "meanStat", "medianStat", "stdStat", "cvStat", "minMaxStat", "rangeStat", "insideStat", "outsideStat"].forEach((id) => $(id).textContent = "0");
+        $("modeStat").textContent = "Sin datos";
+        return;
+      }
+      const hist = histogram(state.data, cfg.bins);
+      const inside = state.data.filter((value) => value >= cfg.lower && value <= cfg.upper).length;
+      const insidePct = (inside / st.n) * 100;
+      $("nStat").textContent = st.n;
+      $("meanStat").textContent = `${fmt(st.mean, 1)} km`;
+      $("medianStat").textContent = `${fmt(st.median, 1)} km`;
+      $("modeStat").textContent = hist.modal;
+      $("stdStat").textContent = `${fmt(st.std, 1)} km`;
+      $("cvStat").textContent = `${fmt(st.cv * 100, 2)}%`;
+      $("minMaxStat").textContent = `${Math.round(st.min)} / ${Math.round(st.max)}`;
+      $("rangeStat").textContent = `${Math.round(st.range)} km`;
+      $("insideStat").textContent = `${fmt(insidePct, 1)}%`;
+      $("outsideStat").textContent = `${fmt(100 - insidePct, 1)}%`;
+    }
+
+    function renderSigma() {
+      const cfg = config();
+      const st = stats(state.data);
+      if (!st) {
+        $("sigmaText").textContent = "Genera datos para calcular el nivel sigma aproximado.";
+        $("sigmaPointer").style.left = "0%";
+        return;
+      }
+      const sigmaLower = (st.mean - cfg.lower) / st.std;
+      const sigmaUpper = (cfg.upper - st.mean) / st.std;
+      const sigmaLevel = Math.max(0, Math.min(sigmaLower, sigmaUpper));
+      $("sigmaPointer").style.left = `${Math.min(100, (sigmaLevel / 3) * 100)}%`;
+      $("sigmaText").textContent = `Sigma inferior: ${fmt(sigmaLower, 2)} | Sigma superior: ${fmt(sigmaUpper, 2)} | Nivel sigma aproximado respecto al límite más cercano: ${fmt(sigmaLevel, 2)}.`;
+    }
+
+    function renderChart() {
+      const cfg = config();
+      const st = stats(state.data);
+      const ctx = $("histogramChart");
+      if (!window.Chart || !st) {
+        if (state.chart) state.chart.destroy();
+        state.chart = null;
+        return;
+      }
+
+      const hist = histogram(state.data, cfg.bins);
+      const labels = hist.bins.map((bin) => `${Math.round(bin.start)}-${Math.round(bin.end)}`);
+      const barValues = hist.bins.map((bin) => bin.count);
+      const maxFreq = Math.max(...barValues, 1);
+      const curveValues = hist.bins.map((bin) => normalPdf(bin.mid, st.mean, st.std) * state.data.length * hist.width);
+      const barColors = hist.bins.map((bin) => {
+        const outside = bin.end < cfg.lower || bin.start > cfg.upper;
+        const partialOutside = bin.start < cfg.lower || bin.end > cfg.upper;
+        return outside || partialOutside ? "rgba(220, 69, 69, 0.78)" : "rgba(15, 111, 182, 0.78)";
+      });
+
+      const refs = [
+        { value: cfg.lower, label: "Límite inferior", color: "#dc4545", dash: [5, 4] },
+        { value: cfg.upper, label: "Límite superior", color: "#dc4545", dash: [5, 4] },
+        { value: st.mean, label: "Media", color: "#7c3aed", width: 3 },
+        { value: st.mean - st.std, label: "-1σ", color: "#f59e0b" },
+        { value: st.mean + st.std, label: "+1σ", color: "#f59e0b" },
+        { value: st.mean - 2 * st.std, label: "-2σ", color: "#f59e0b", dash: [3, 4] },
+        { value: st.mean + 2 * st.std, label: "+2σ", color: "#f59e0b", dash: [3, 4] },
+        { value: st.mean - 3 * st.std, label: "-3σ", color: "#f59e0b", dash: [2, 5] },
+        { value: st.mean + 3 * st.std, label: "+3σ", color: "#f59e0b", dash: [2, 5] }
+      ];
+
+      const minX = Math.min(hist.min, cfg.lower, st.mean - 3 * st.std);
+      const maxX = Math.max(hist.max, cfg.upper, st.mean + 3 * st.std);
+
+      if (state.chart) state.chart.destroy();
+      state.chart = new Chart(ctx, {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: "bar",
+              label: "Frecuencia",
+              data: barValues,
+              backgroundColor: barColors,
+              borderColor: barColors.map((color) => color.replace("0.78", "1")),
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              type: "line",
+              label: "Curva normal aproximada",
+              data: curveValues,
+              borderColor: "#14a66a",
+              backgroundColor: "rgba(20, 166, 106, 0.12)",
+              borderWidth: 3,
+              pointRadius: 0,
+              tension: 0.35,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                title: (items) => `Intervalo ${items[0].label} km`
+              }
+            },
+            referenceLines: { references: refs, minX, maxX }
+          },
+          scales: {
+            x: { title: { display: true, text: "Kilometraje real al ingreso de mantenimiento" } },
+            y: { beginAtZero: true, suggestedMax: Math.ceil(maxFreq * 1.25), title: { display: true, text: "Frecuencia" }, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+
+    function renderInterpretation() {
+      const cfg = config();
+      const st = stats(state.data);
+      if (!st) {
+        $("interpretation").textContent = "Genera una simulación para obtener una interpretación del comportamiento del proceso.";
+        return;
+      }
+      const inside = state.data.filter((value) => value >= cfg.lower && value <= cfg.upper).length;
+      const insidePct = (inside / st.n) * 100;
+      const sigmaLevel = Math.min((st.mean - cfg.lower) / st.std, (cfg.upper - st.mean) / st.std);
+      const variability = st.std <= 100 ? "baja" : st.std <= 220 ? "media" : "alta";
+      const controlText = insidePct >= 95 && sigmaLevel >= 2
+        ? "El proceso luce razonablemente controlado para el rango definido."
+        : "El proceso presenta variabilidad relevante y conviene revisar la programación de citas de mantenimiento.";
+      $("interpretation").textContent =
+        `La desviación estándar muestral es ${fmt(st.std, 1)} km, lo que indica variabilidad ${variability}. ` +
+        `La media observada es ${fmt(st.mean, 1)} km frente al valor esperado de ${fmt(cfg.mean, 0)} km. ` +
+        `El ${fmt(insidePct, 1)}% de vehículos ingresa dentro del rango aceptable (${cfg.lower} a ${cfg.upper} km) y el ${fmt(100 - insidePct, 1)}% queda fuera. ` +
+        `El proceso tiene aproximadamente ${fmt(sigmaLevel, 2)} sigmas respecto al límite más cercano. ${controlText}`;
+    }
+
+    function renderAll() {
+      renderDataSelect();
+      renderStats();
+      renderSigma();
+      renderChart();
+      renderInterpretation();
+    }
+
+    function setVariability(std) {
+      $("stdInput").value = std;
+      generateSimulation();
+    }
+
+    function bindEvents() {
+      $("generateBtn").addEventListener("click", generateSimulation);
+      $("heroGenerate").addEventListener("click", generateSimulation);
+      $("dockGenerate").addEventListener("click", generateSimulation);
+      $("updateDataBtn").addEventListener("click", updateFromText);
+      $("dockUpdate").addEventListener("click", updateFromText);
+      $("addDataBtn").addEventListener("click", addData);
+      $("deleteDataBtn").addEventListener("click", deleteSelectedData);
+      $("clearBtn").addEventListener("click", clearData);
+      $("lowVarBtn").addEventListener("click", () => setVariability(70));
+      $("mediumVarBtn").addEventListener("click", () => setVariability(150));
+      $("heroMedium").addEventListener("click", () => setVariability(150));
+      $("highVarBtn").addEventListener("click", () => setVariability(330));
+      ["meanInput", "stdInput", "sampleInput", "binsInput", "lowerInput", "upperInput"].forEach((id) => {
+        $(id).addEventListener("input", () => renderAll());
+      });
+    }
+
+    bindEvents();
+    generateSimulation();
+  </script>
+</body>
+</html>

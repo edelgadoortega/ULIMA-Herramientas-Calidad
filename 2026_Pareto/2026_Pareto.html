@@ -1,0 +1,202 @@
+<div style="font-family: Arial; max-width: 950px; margin:auto;">
+  <h2>Simulador del Diagrama de Pareto</h2>
+
+  <p>
+    Ingresa las causas del problema y su frecuencia. El simulador ordenará los datos,
+    calculará la frecuencia acumulada, el porcentaje individual y el porcentaje acumulado.
+  </p>
+
+  <h3>1. Registro de datos</h3>
+
+  <table id="tablaPareto" border="1" cellpadding="6" style="border-collapse: collapse; width:100%;">
+    <thead style="background:#e8eef7;">
+      <tr>
+        <th>Causa del problema</th>
+        <th>Frecuencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td contenteditable="true">Expediente incompleto</td><td contenteditable="true">42</td></tr>
+      <tr><td contenteditable="true">Error de registro</td><td contenteditable="true">28</td></tr>
+      <tr><td contenteditable="true">Demora en revisión</td><td contenteditable="true">15</td></tr>
+      <tr><td contenteditable="true">Falta de firma</td><td contenteditable="true">8</td></tr>
+      <tr><td contenteditable="true">Sistema no disponible</td><td contenteditable="true">5</td></tr>
+    </tbody>
+  </table>
+
+  <br>
+  <button onclick="agregarFila()">Agregar causa</button>
+  <button onclick="generarPareto()">Generar Pareto</button>
+
+  <h3>2. Tabla de cálculo Pareto</h3>
+
+  <table id="tablaResultado" border="1" cellpadding="6" style="border-collapse: collapse; width:100%;">
+    <thead style="background:#d9ead3;">
+      <tr>
+        <th>Orden</th>
+        <th>Causa</th>
+        <th>Frecuencia</th>
+        <th>Frecuencia acumulada</th>
+        <th>% individual</th>
+        <th>% acumulado</th>
+        <th>Clasificación</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>3. Gráfico de Pareto</h3>
+  <canvas id="graficoPareto" width="900" height="430"></canvas>
+
+  <p id="interpretacion" style="font-weight:bold;"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let chartPareto;
+
+function agregarFila() {
+  const tbody = document.querySelector("#tablaPareto tbody");
+  const fila = document.createElement("tr");
+
+  fila.innerHTML = `
+    <td contenteditable="true">Nueva causa</td>
+    <td contenteditable="true">0</td>
+  `;
+
+  tbody.appendChild(fila);
+}
+
+function generarPareto() {
+  const filas = document.querySelectorAll("#tablaPareto tbody tr");
+  let datos = [];
+
+  filas.forEach(fila => {
+    const causa = fila.cells[0].innerText.trim();
+    const frecuencia = parseFloat(fila.cells[1].innerText.trim());
+
+    if (causa && !isNaN(frecuencia) && frecuencia >= 0) {
+      datos.push({ causa, frecuencia });
+    }
+  });
+
+  datos.sort((a, b) => b.frecuencia - a.frecuencia);
+
+  const total = datos.reduce((suma, item) => suma + item.frecuencia, 0);
+
+  if (total === 0) {
+    alert("La suma de frecuencias debe ser mayor que cero.");
+    return;
+  }
+
+  let frecuenciaAcumulada = 0;
+  let causasPrioritarias = [];
+
+  const cuerpoResultado = document.querySelector("#tablaResultado tbody");
+  cuerpoResultado.innerHTML = "";
+
+  datos.forEach((item, index) => {
+    frecuenciaAcumulada += item.frecuencia;
+
+    const porcentajeIndividual = (item.frecuencia / total) * 100;
+    const porcentajeAcumulado = (frecuenciaAcumulada / total) * 100;
+
+    const clasificacion = porcentajeAcumulado <= 80 ? "Causa prioritaria" : "Causa secundaria";
+
+    if (porcentajeAcumulado <= 80 || causasPrioritarias.length === 0) {
+      causasPrioritarias.push(item.causa);
+    }
+
+    const filaResultado = document.createElement("tr");
+
+    filaResultado.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${item.causa}</td>
+      <td>${item.frecuencia}</td>
+      <td>${frecuenciaAcumulada}</td>
+      <td>${porcentajeIndividual.toFixed(2)}%</td>
+      <td>${porcentajeAcumulado.toFixed(2)}%</td>
+      <td>${clasificacion}</td>
+    `;
+
+    cuerpoResultado.appendChild(filaResultado);
+  });
+
+  const causas = datos.map(item => item.causa);
+  const frecuencias = datos.map(item => item.frecuencia);
+
+  frecuenciaAcumulada = 0;
+
+  const porcentajesAcumulados = datos.map(item => {
+    frecuenciaAcumulada += item.frecuencia;
+    return ((frecuenciaAcumulada / total) * 100).toFixed(2);
+  });
+
+  const ctx = document.getElementById("graficoPareto").getContext("2d");
+
+  if (chartPareto) {
+    chartPareto.destroy();
+  }
+
+  chartPareto = new Chart(ctx, {
+    data: {
+      labels: causas,
+      datasets: [
+        {
+          type: "bar",
+          label: "Frecuencia",
+          data: frecuencias,
+          backgroundColor: "#4F81BD",
+          yAxisID: "y"
+        },
+        {
+          type: "line",
+          label: "% acumulado",
+          data: porcentajesAcumulados,
+          borderColor: "#C0504D",
+          backgroundColor: "#C0504D",
+          yAxisID: "y1",
+          tension: 0.2
+        },
+        {
+          type: "line",
+          label: "Línea 80%",
+          data: causas.map(() => 80),
+          borderColor: "#6AA84F",
+          borderDash: [6, 6],
+          pointRadius: 0,
+          yAxisID: "y1"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Diagrama de Pareto"
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Frecuencia" }
+        },
+        y1: {
+          beginAtZero: true,
+          max: 100,
+          position: "right",
+          title: { display: true, text: "% acumulado" },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+
+  document.getElementById("interpretacion").innerText =
+    "Interpretación: Las causas prioritarias son: " +
+    causasPrioritarias.join(", ") +
+    ". Estas deben analizarse primero porque concentran la mayor parte del problema.";
+}
+</script>
