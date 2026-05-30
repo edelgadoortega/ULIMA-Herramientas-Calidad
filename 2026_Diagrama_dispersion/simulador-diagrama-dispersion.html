@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador de Diagrama de Dispersión</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --blue: #0f6fb6;
+      --blue-dark: #10364d;
+      --orange: #f59e0b;
+      --green: #16a66a;
+      --red: #d94d4d;
+      --text: #132f3f;
+      --muted: #617481;
+      --line: #d9e6ec;
+      --card: rgba(255, 255, 255, 0.94);
+      --white: #ffffff;
+      --soft: #f3f8fa;
+      --shadow: 0 18px 48px rgba(17, 55, 76, 0.16);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(245, 158, 11, 0.2), transparent 24rem),
+        radial-gradient(circle at 12% 18%, rgba(22, 166, 106, 0.2), transparent 24rem),
+        linear-gradient(135deg, rgba(238, 247, 251, 0.94), rgba(248, 252, 253, 0.98)),
+        repeating-linear-gradient(90deg, rgba(15, 111, 182, 0.06) 0 2px, transparent 2px 84px);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.42;
+      background:
+        linear-gradient(140deg, transparent 0 58%, rgba(15, 111, 182, 0.16) 58% 59%, transparent 59%),
+        linear-gradient(30deg, transparent 0 64%, rgba(22, 166, 106, 0.14) 64% 65%, transparent 65%);
+      pointer-events: none;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .shell {
+      width: min(1220px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 36px;
+    }
+
+    .hero {
+      min-height: 56vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-copy, .hero-visual, .card, .dock {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-copy {
+      display: grid;
+      align-content: center;
+      padding: clamp(24px, 5vw, 42px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 12ch;
+      margin: 0;
+      color: var(--blue-dark);
+      font-size: clamp(2.45rem, 6vw, 5.5rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 700px;
+      margin: 18px 0 26px;
+      color: var(--muted);
+      font-size: 1.14rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions, .button-row, .section-title, .dock, .compare-grid {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 44px;
+      padding: 10px 15px;
+      border-radius: var(--radius);
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      box-shadow: 0 10px 24px rgba(15, 111, 182, 0.22);
+    }
+
+    .secondary {
+      color: var(--blue-dark);
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+
+    .danger {
+      color: #fff;
+      background: var(--red);
+    }
+
+    .hero-visual {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+      color: #fff;
+      background: linear-gradient(140deg, rgba(15, 111, 182, 0.95), rgba(245, 158, 11, 0.78));
+    }
+
+    .hero-visual::before {
+      content: "🚗";
+      position: absolute;
+      right: 22px;
+      bottom: 0;
+      font-size: clamp(6rem, 16vw, 13rem);
+      opacity: 0.2;
+    }
+
+    .scatter-dots {
+      position: absolute;
+      inset: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.14) 1px, transparent 1px);
+      background-size: 46px 46px;
+    }
+
+    .scatter-dots span {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 5px rgba(255,255,255,.15);
+    }
+
+    .trend-line {
+      position: absolute;
+      left: 13%;
+      right: 10%;
+      top: 54%;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--orange);
+      transform: rotate(-18deg);
+      transform-origin: left center;
+    }
+
+    main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card { padding: 22px; }
+
+    .section-title { margin-bottom: 16px; }
+    .section-title h2 { margin: 0; font-size: 1.22rem; }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border-radius: var(--radius);
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--orange));
+      font-size: 1.18rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(15, 111, 182, 0.12);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 18px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 420px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    table {
+      width: 100%;
+      min-width: 560px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--blue-dark);
+      background: #eef6fa;
+      font-size: 0.84rem;
+    }
+
+    td input {
+      min-width: 110px;
+      padding: 9px;
+    }
+
+    .mini {
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      font-weight: 850;
+    }
+
+    .chart-box {
+      height: 540px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .chart-box canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      min-height: 102px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .stat strong {
+      color: var(--blue-dark);
+      font-size: clamp(1.05rem, 1.9vw, 1.55rem);
+      overflow-wrap: anywhere;
+    }
+
+    .formula {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-left: 5px solid var(--orange);
+      border-radius: var(--radius);
+      background: rgba(245, 158, 11, 0.12);
+      line-height: 1.6;
+    }
+
+    .interpretation {
+      margin: 0;
+      padding: 18px;
+      border-left: 5px solid var(--green);
+      border-radius: var(--radius);
+      background: rgba(22, 166, 106, 0.1);
+      line-height: 1.65;
+    }
+
+    .compare-panel {
+      flex: 1 1 260px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .compare-panel h3 { margin: 0 0 8px; }
+    .compare-panel p { margin: 6px 0; color: var(--muted); }
+
+    .questions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .questions textarea, #pasteArea {
+      min-height: 96px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .dock {
+      position: sticky;
+      bottom: 12px;
+      z-index: 10;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: min(380px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--blue-dark);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: 0.2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 980px) {
+      .hero, .two-col, .grid, .stats-grid, .questions {
+        grid-template-columns: 1fr;
+      }
+      .hero { min-height: auto; }
+      .hero-visual { min-height: 300px; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1220px); }
+      .hero-copy, .card { padding: 18px; }
+      .button-row, .hero-actions, .dock { align-items: stretch; flex-direction: column; }
+      .chart-box { height: 460px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <section class="hero-copy">
+        <p class="eyebrow">Gestión por procesos | Calidad | Análisis de relaciones</p>
+        <h1>Simulador de Dispersión</h1>
+        <p class="subtitle">Explora si variables como kilometraje, fallas o experiencia técnica se relacionan con el tiempo de mantenimiento vehicular.</p>
+        <div class="hero-actions">
+          <button class="button primary" id="heroGenerate" type="button">🔎 Generar simulación</button>
+          <button class="button secondary" id="caseHero" type="button">🚗 Cargar caso de ejemplo</button>
+          <a class="button secondary" href="portal-simuladores-calidad.html">Volver al portal</a>
+        </div>
+      </section>
+
+      <aside class="hero-visual" aria-label="Visual del diagrama de dispersión">
+        <div class="scatter-dots" aria-hidden="true">
+          <span style="left:14%; top:70%"></span><span style="left:22%; top:62%"></span><span style="left:31%; top:57%"></span>
+          <span style="left:40%; top:49%"></span><span style="left:49%; top:45%"></span><span style="left:57%; top:39%"></span>
+          <span style="left:66%; top:33%"></span><span style="left:75%; top:29%"></span><span style="left:82%; top:23%"></span>
+          <div class="trend-line"></div>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-title"><span class="icon">⚙️</span><h2>1. Panel de configuración</h2></div>
+        <div class="grid">
+          <label>Tipo de relación
+            <select id="relationType">
+              <option value="linearPositive">Relación lineal positiva</option>
+              <option value="linearNegative">Relación lineal negativa</option>
+              <option value="exponential">Relación exponencial</option>
+              <option value="logarithmic">Relación logarítmica</option>
+              <option value="quadratic">Relación cuadrática</option>
+              <option value="weak">Relación débil</option>
+              <option value="none">Sin relación aparente</option>
+            </select>
+          </label>
+          <label>Variable X a analizar
+            <select id="xVariable">
+              <option value="Kilometraje del vehículo">Kilometraje del vehículo</option>
+              <option value="Antigüedad del vehículo">Antigüedad del vehículo</option>
+              <option value="Número de fallas reportadas">Número de fallas reportadas</option>
+              <option value="Tiempo desde el último mantenimiento">Tiempo desde el último mantenimiento</option>
+              <option value="Cantidad de repuestos requeridos">Cantidad de repuestos requeridos</option>
+              <option value="Nivel de experiencia del técnico">Nivel de experiencia del técnico</option>
+            </select>
+          </label>
+          <label>Tamaño de muestra<input id="sampleSize" type="number" min="5" max="300" value="50"></label>
+          <label>Nivel de ruido
+            <select id="noiseLevel">
+              <option value="low">Bajo</option>
+              <option value="medium" selected>Medio</option>
+              <option value="high">Alto</option>
+            </select>
+          </label>
+          <label>Rango mínimo de X<input id="xMin" type="number" value="1000"></label>
+          <label>Rango máximo de X<input id="xMax" type="number" value="12000"></label>
+        </div>
+        <div class="button-row" style="margin-top:16px">
+          <button class="button primary" id="generateBtn" type="button">🔎 Generar simulación</button>
+          <button class="button secondary" id="newSampleBtn" type="button">🎲 Generar nueva muestra</button>
+          <button class="button secondary" id="caseBtn" type="button">🚗 Cargar caso de ejemplo</button>
+          <button class="button danger" id="clearBtn" type="button">🧹 Limpiar datos</button>
+        </div>
+      </section>
+
+      <section class="two-col">
+        <article class="card">
+          <div class="section-title"><span class="icon">✍️</span><h2>2. Tabla editable de datos</h2></div>
+          <p class="interpretation" style="border-left-color:var(--blue); background:rgba(15,111,182,.09)">Cada fila representa un vehículo atendido. Puedes editar X o Y, agregar filas, eliminar registros o pegar datos manualmente.</p>
+          <div class="table-wrap" style="margin-top:14px">
+            <table>
+              <thead>
+                <tr><th>Vehículo</th><th>X</th><th>Tiempo Y (min)</th><th></th></tr>
+              </thead>
+              <tbody id="dataTable"></tbody>
+            </table>
+          </div>
+          <div class="button-row" style="margin-top:14px">
+            <button class="button secondary" id="addRowBtn" type="button">➕ Agregar fila</button>
+            <button class="button primary" id="updateChartBtn" type="button">🔄 Actualizar gráfico</button>
+          </div>
+          <label style="margin-top:14px">Pegar datos manualmente
+            <textarea id="pasteArea" placeholder="Pega pares X,Y. Ejemplos:&#10;4800,58&#10;5200,65&#10;6100,80"></textarea>
+          </label>
+          <button class="button secondary" id="pasteBtn" type="button" style="margin-top:10px">📋 Cargar datos pegados</button>
+        </article>
+
+        <article class="card">
+          <div class="section-title"><span class="icon">📊</span><h2>3. Diagrama de dispersión</h2></div>
+          <div class="chart-box"><canvas id="scatterChart"></canvas></div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">🧮</span><h2>4. Cálculos estadísticos</h2></div>
+        <div class="stats-grid">
+          <div class="stat"><span>Número de datos</span><strong id="nStat">0</strong></div>
+          <div class="stat"><span>Media de X</span><strong id="meanXStat">0</strong></div>
+          <div class="stat"><span>Media de Y</span><strong id="meanYStat">0</strong></div>
+          <div class="stat"><span>Desv. estándar X</span><strong id="stdXStat">0</strong></div>
+          <div class="stat"><span>Desv. estándar Y</span><strong id="stdYStat">0</strong></div>
+          <div class="stat"><span>Covarianza</span><strong id="covStat">0</strong></div>
+          <div class="stat"><span>Pearson r</span><strong id="rStat">0</strong></div>
+          <div class="stat"><span>R²</span><strong id="r2Stat">0</strong></div>
+        </div>
+      </section>
+
+      <section class="two-col">
+        <article class="card">
+          <div class="section-title"><span class="icon">ƒ</span><h2>5. Fórmula visible</h2></div>
+          <div class="formula">
+            <strong>Modelo estimado:</strong>
+            <span id="formulaModel">y = a + bx</span>
+            <strong>Coeficiente de correlación:</strong>
+            <span id="formulaR">r = 0.00</span>
+            <strong>Coeficiente de determinación:</strong>
+            <span id="formulaR2">R² = 0.00</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="section-title"><span class="icon">💡</span><h2>6. Interpretación automática</h2></div>
+          <p id="interpretation" class="interpretation">Genera una simulación para interpretar la relación entre variables.</p>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">⚖️</span><h2>7. Comparador de simulaciones</h2></div>
+        <div class="button-row" style="margin-bottom:14px">
+          <button class="button secondary" id="saveA" type="button">Guardar como Simulación A</button>
+          <button class="button secondary" id="saveB" type="button">Guardar como Simulación B</button>
+        </div>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <h3>Simulación A</h3>
+            <p id="simA">Sin guardar.</p>
+          </div>
+          <div class="compare-panel">
+            <h3>Simulación B</h3>
+            <p id="simB">Sin guardar.</p>
+          </div>
+        </div>
+        <p id="comparisonText" class="interpretation" style="margin-top:14px">Guarda dos simulaciones para comparar la concentración de puntos y el valor de R².</p>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">🎓</span><h2>8. Actividad pedagógica</h2></div>
+        <div class="questions">
+          <label>¿Qué tipo de relación observas entre las variables?<textarea></textarea></label>
+          <label>¿La relación parece fuerte, moderada o débil?<textarea></textarea></label>
+          <label>¿Qué significa el valor de R²?<textarea></textarea></label>
+          <label>¿Qué ocurre cuando aumenta el nivel de ruido?<textarea></textarea></label>
+          <label>¿Qué decisión de mejora tomarías para reducir el tiempo de mantenimiento?<textarea></textarea></label>
+          <label>¿Por qué no debe confundirse correlación con causalidad?<textarea></textarea></label>
+        </div>
+      </section>
+
+      <section class="dock">
+        <button class="button primary" id="dockGenerate" type="button">🔎 Generar simulación</button>
+        <button class="button secondary" id="dockUpdate" type="button">🔄 Actualizar gráfico</button>
+        <a class="button secondary" href="portal-simuladores-calidad.html">Volver al portal</a>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Datos principales: cada objeto representa un vehículo atendido.
+    const state = {
+      data: [],
+      chart: null,
+      savedA: null,
+      savedB: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message) {
+      const node = $("toast");
+      node.textContent = message;
+      node.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 2500);
+    }
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function normalNoise(scale) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return scale * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function cfg() {
+      const min = Number($("xMin").value);
+      const max = Number($("xMax").value);
+      return {
+        relation: $("relationType").value,
+        variable: $("xVariable").value,
+        sample: Math.max(5, Math.round(Number($("sampleSize").value))),
+        noise: $("noiseLevel").value,
+        minX: Math.min(min, max - 1),
+        maxX: Math.max(max, min + 1)
+      };
+    }
+
+    function noiseScale(level) {
+      if (level === "low") return 4;
+      if (level === "high") return 20;
+      return 10;
+    }
+
+    function normalizeX(x, minX, maxX) {
+      return (x - minX) / (maxX - minX);
+    }
+
+    // Genera Y de acuerdo con el tipo de relación seleccionado.
+    function yFromRelation(x, config) {
+      const t = normalizeX(x, config.minX, config.maxX);
+      const noise = normalNoise(config.relation === "weak" ? 28 : noiseScale(config.noise));
+      let y;
+      if (config.relation === "linearPositive") y = 35 + 75 * t + noise;
+      if (config.relation === "linearNegative") y = 115 - 70 * t + noise;
+      if (config.relation === "exponential") y = 28 + 25 * Math.exp(1.35 * t) + noise;
+      if (config.relation === "logarithmic") y = 30 + 42 * Math.log(1 + 6 * t) + noise;
+      if (config.relation === "quadratic") y = 42 + 95 * Math.pow(t - 0.5, 2) + 34 * t + noise;
+      if (config.relation === "weak") y = 50 + 45 * t + noise;
+      if (config.relation === "none") y = randomBetween(35, 120) + normalNoise(noiseScale(config.noise));
+      return Math.max(10, Math.round(y));
+    }
+
+    function generateData() {
+      const config = cfg();
+      state.data = Array.from({ length: config.sample }, (_, index) => {
+        const x = Math.round(randomBetween(config.minX, config.maxX));
+        return { id: index + 1, x, y: yFromRelation(x, config) };
+      }).sort((a, b) => a.x - b.x).map((row, index) => ({ ...row, id: index + 1 }));
+      renderAll();
+      toast("Simulación generada.");
+    }
+
+    function loadCase() {
+      $("relationType").value = "linearPositive";
+      $("xVariable").value = "Kilometraje del vehículo";
+      $("sampleSize").value = 50;
+      $("noiseLevel").value = "medium";
+      $("xMin").value = 3000;
+      $("xMax").value = 12000;
+      generateData();
+      toast("Caso cargado: kilometraje y tiempo de mantenimiento.");
+    }
+
+    function clearData() {
+      state.data = [];
+      renderAll();
+      toast("Datos limpiados.");
+    }
+
+    function renderTable() {
+      const variable = cfg().variable;
+      const tbody = $("dataTable");
+      tbody.innerHTML = state.data.length
+        ? state.data.map((row, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td><input type="number" value="${row.x}" data-field="x" data-index="${index}" aria-label="${variable} vehículo ${index + 1}"></td>
+            <td><input type="number" value="${row.y}" data-field="y" data-index="${index}" aria-label="Tiempo vehículo ${index + 1}"></td>
+            <td><button class="mini danger" type="button" data-delete="${index}">Eliminar</button></td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="4">No hay datos. Genera una simulación o pega datos manualmente.</td></tr>`;
+
+      tbody.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("input", () => {
+          const index = Number(input.dataset.index);
+          const field = input.dataset.field;
+          state.data[index][field] = Number(input.value);
+        });
+      });
+      tbody.querySelectorAll("[data-delete]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.data.splice(Number(button.dataset.delete), 1);
+          renderAll();
+        });
+      });
+    }
+
+    function addRow() {
+      const config = cfg();
+      const x = Math.round((config.minX + config.maxX) / 2);
+      state.data.push({ id: state.data.length + 1, x, y: yFromRelation(x, config) });
+      renderAll();
+    }
+
+    function updateFromTable() {
+      state.data = state.data
+        .filter((row) => Number.isFinite(row.x) && Number.isFinite(row.y))
+        .map((row, index) => ({ id: index + 1, x: Number(row.x), y: Number(row.y) }));
+      renderAll();
+      toast("Gráfico actualizado.");
+    }
+
+    function loadPastedData() {
+      const rows = $("pasteArea").value.trim().split(/\n+/);
+      const parsed = rows.map((line, index) => {
+        const parts = line.split(/[,;\t ]+/).map(Number).filter(Number.isFinite);
+        return parts.length >= 2 ? { id: index + 1, x: parts[0], y: parts[1] } : null;
+      }).filter(Boolean);
+      if (parsed.length < 2) return toast("Pega al menos dos pares X,Y válidos.");
+      state.data = parsed;
+      $("pasteArea").value = "";
+      renderAll();
+      toast("Datos pegados cargados.");
+    }
+
+    function mean(values) {
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function sampleStd(values) {
+      if (values.length < 2) return 0;
+      const avg = mean(values);
+      return Math.sqrt(values.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / (values.length - 1));
+    }
+
+    function statistics() {
+      if (state.data.length < 2) return null;
+      const xs = state.data.map((row) => Number(row.x));
+      const ys = state.data.map((row) => Number(row.y));
+      const n = xs.length;
+      const meanX = mean(xs);
+      const meanY = mean(ys);
+      const stdX = sampleStd(xs);
+      const stdY = sampleStd(ys);
+      const cov = xs.reduce((sum, x, index) => sum + (x - meanX) * (ys[index] - meanY), 0) / (n - 1);
+      const r = stdX && stdY ? cov / (stdX * stdY) : 0;
+      const r2 = r * r;
+      return { n, xs, ys, meanX, meanY, stdX, stdY, cov, r, r2 };
+    }
+
+    function linearRegression(data) {
+      const st = statistics();
+      if (!st) return { a: 0, b: 0 };
+      const b = st.cov / Math.pow(st.stdX || 1, 2);
+      const a = st.meanY - b * st.meanX;
+      return { a, b };
+    }
+
+    function transformedRegression(transformX, transformY = (y) => y, inverseY = (y) => y) {
+      const rows = state.data
+        .map((row) => ({ x: transformX(row.x), y: transformY(row.y) }))
+        .filter((row) => Number.isFinite(row.x) && Number.isFinite(row.y));
+      if (rows.length < 2) return { a: 0, b: 0, predict: () => 0 };
+      const xs = rows.map((row) => row.x);
+      const ys = rows.map((row) => row.y);
+      const meanX = mean(xs);
+      const meanY = mean(ys);
+      const cov = xs.reduce((sum, x, i) => sum + (x - meanX) * (ys[i] - meanY), 0) / (rows.length - 1);
+      const varX = xs.reduce((sum, x) => sum + Math.pow(x - meanX, 2), 0) / (rows.length - 1);
+      const b = cov / (varX || 1);
+      const a = meanY - b * meanX;
+      return { a, b, predict: (x) => inverseY(a + b * transformX(x)) };
+    }
+
+    function quadraticRegression() {
+      const rows = state.data;
+      const n = rows.length;
+      if (n < 3) return { a: 0, b: 0, c: 0, predict: () => 0 };
+      const sx = rows.reduce((s, r) => s + r.x, 0);
+      const sx2 = rows.reduce((s, r) => s + r.x ** 2, 0);
+      const sx3 = rows.reduce((s, r) => s + r.x ** 3, 0);
+      const sx4 = rows.reduce((s, r) => s + r.x ** 4, 0);
+      const sy = rows.reduce((s, r) => s + r.y, 0);
+      const sxy = rows.reduce((s, r) => s + r.x * r.y, 0);
+      const sx2y = rows.reduce((s, r) => s + r.x ** 2 * r.y, 0);
+      const matrix = [[sx4, sx3, sx2, sx2y], [sx3, sx2, sx, sxy], [sx2, sx, n, sy]];
+      for (let i = 0; i < 3; i += 1) {
+        let maxRow = i;
+        for (let k = i + 1; k < 3; k += 1) if (Math.abs(matrix[k][i]) > Math.abs(matrix[maxRow][i])) maxRow = k;
+        [matrix[i], matrix[maxRow]] = [matrix[maxRow], matrix[i]];
+        const pivot = matrix[i][i] || 1;
+        for (let j = i; j < 4; j += 1) matrix[i][j] /= pivot;
+        for (let k = 0; k < 3; k += 1) {
+          if (k === i) continue;
+          const factor = matrix[k][i];
+          for (let j = i; j < 4; j += 1) matrix[k][j] -= factor * matrix[i][j];
+        }
+      }
+      const a = matrix[0][3], b = matrix[1][3], c = matrix[2][3];
+      return { a, b, c, predict: (x) => a * x * x + b * x + c };
+    }
+
+    function model() {
+      const relation = cfg().relation;
+      if (relation === "exponential") {
+        const reg = transformedRegression((x) => x, (y) => Math.log(Math.max(1, y)), (lnY) => Math.exp(lnY));
+        return { ...reg, label: `y = ${fmt(Math.exp(reg.a), 2)} · e^(${fmt(reg.b, 5)}x)`, predict: reg.predict };
+      }
+      if (relation === "logarithmic") {
+        const reg = transformedRegression((x) => Math.log(Math.max(1, x)));
+        return { ...reg, label: `y = ${fmt(reg.a, 2)} + ${fmt(reg.b, 2)} ln(x)`, predict: reg.predict };
+      }
+      if (relation === "quadratic") {
+        const reg = quadraticRegression();
+        return { ...reg, label: `y = ${fmt(reg.a, 8)}x² + ${fmt(reg.b, 3)}x + ${fmt(reg.c, 2)}`, predict: reg.predict };
+      }
+      const reg = linearRegression();
+      return { ...reg, label: `y = ${fmt(reg.a, 2)} + ${fmt(reg.b, 4)}x`, predict: (x) => reg.a + reg.b * x };
+    }
+
+    function fmt(value, decimals = 2) {
+      if (!Number.isFinite(value)) return "0";
+      return value.toLocaleString("es-PE", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+    }
+
+    function trendPoints() {
+      if (state.data.length < 2) return [];
+      const xs = state.data.map((row) => row.x);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const m = model();
+      return Array.from({ length: 80 }, (_, i) => {
+        const x = minX + (i / 79) * (maxX - minX);
+        return { x, y: m.predict(x) };
+      });
+    }
+
+    function renderChart() {
+      if (!window.Chart) return;
+      const config = cfg();
+      const chartData = state.data.map((row) => ({ x: row.x, y: row.y }));
+      if (state.chart) state.chart.destroy();
+      state.chart = new Chart($("scatterChart"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "Vehículos atendidos",
+              data: chartData,
+              backgroundColor: "rgba(15, 111, 182, 0.78)",
+              borderColor: "#0f6fb6",
+              pointRadius: 5,
+              pointHoverRadius: 7
+            },
+            {
+              type: "line",
+              label: "Línea de tendencia",
+              data: trendPoints(),
+              borderColor: "#f59e0b",
+              backgroundColor: "rgba(245, 158, 11, 0.15)",
+              borderWidth: 3,
+              pointRadius: 0,
+              tension: config.relation === "linearPositive" || config.relation === "linearNegative" || config.relation === "weak" || config.relation === "none" ? 0 : 0.25
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${config.variable}: ${fmt(ctx.raw.x, 0)} | Tiempo: ${fmt(ctx.raw.y, 0)} min`
+              }
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: config.variable } },
+            y: { title: { display: true, text: "Tiempo de mantenimiento (minutos)" }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderStats() {
+      const st = statistics();
+      if (!st) {
+        ["nStat", "meanXStat", "meanYStat", "stdXStat", "stdYStat", "covStat", "rStat", "r2Stat"].forEach((id) => $(id).textContent = "0");
+        $("formulaModel").textContent = "y = a + bx";
+        $("formulaR").textContent = "r = 0.00";
+        $("formulaR2").textContent = "R² = 0.00";
+        return;
+      }
+      const m = model();
+      $("nStat").textContent = st.n;
+      $("meanXStat").textContent = fmt(st.meanX, 1);
+      $("meanYStat").textContent = `${fmt(st.meanY, 1)} min`;
+      $("stdXStat").textContent = fmt(st.stdX, 1);
+      $("stdYStat").textContent = `${fmt(st.stdY, 1)} min`;
+      $("covStat").textContent = fmt(st.cov, 2);
+      $("rStat").textContent = fmt(st.r, 3);
+      $("r2Stat").textContent = fmt(st.r2, 3);
+      $("formulaModel").textContent = `Modelo estimado: ${m.label}`;
+      $("formulaR").textContent = `r = ${fmt(st.r, 3)}`;
+      $("formulaR2").textContent = `R² = ${fmt(st.r2, 3)}`;
+    }
+
+    function relationStrength(absR) {
+      if (absR >= 0.8) return "fuerte";
+      if (absR >= 0.5) return "moderada";
+      if (absR >= 0.3) return "débil";
+      return "muy débil o inexistente";
+    }
+
+    function renderInterpretation() {
+      const st = statistics();
+      if (!st) {
+        $("interpretation").textContent = "Genera una simulación para interpretar la relación entre variables.";
+        return;
+      }
+      const config = cfg();
+      const direction = st.r >= 0 ? "positiva" : "negativa";
+      const strength = relationStrength(Math.abs(st.r));
+      const causeHint = config.variable === "Nivel de experiencia del técnico"
+        ? "a mayor experiencia del técnico, el tiempo podría tender a disminuir si la relación es negativa."
+        : `a mayor ${config.variable.toLowerCase()}, el tiempo de mantenimiento podría tender a ${st.r >= 0 ? "aumentar" : "disminuir"}.`;
+      $("interpretation").textContent =
+        `Existe una relación ${direction} ${strength} entre ${config.variable.toLowerCase()} y el tiempo de mantenimiento. ` +
+        `El coeficiente r es ${fmt(st.r, 3)} y R² es ${fmt(st.r2, 3)}, por lo que aproximadamente el ${fmt(st.r2 * 100, 1)}% de la variación del tiempo puede explicarse por la variable X en este modelo. ` +
+        `${causeHint} Aunque se observe un patrón visual, recuerda que correlación no implica causalidad.`;
+    }
+
+    function renderComparison() {
+      $("simA").innerHTML = state.savedA ? comparisonHtml(state.savedA) : "Sin guardar.";
+      $("simB").innerHTML = state.savedB ? comparisonHtml(state.savedB) : "Sin guardar.";
+      if (!state.savedA || !state.savedB) return;
+      const better = state.savedA.r2 >= state.savedB.r2 ? "A" : "B";
+      const other = better === "A" ? "B" : "A";
+      $("comparisonText").textContent = `La simulación ${better} presenta mayor R² que la simulación ${other}; por ello, sus puntos están más concentrados alrededor de la tendencia estimada. Si el nivel de ruido aumenta, normalmente R² disminuye y la relación se vuelve más difícil de interpretar.`;
+    }
+
+    function comparisonHtml(item) {
+      return `Tipo: ${item.type}<br>r: ${fmt(item.r, 3)}<br>R²: ${fmt(item.r2, 3)}<br>Dispersión: ${item.noise}`;
+    }
+
+    function saveSimulation(slot) {
+      const st = statistics();
+      if (!st) return toast("Genera datos antes de guardar la simulación.");
+      const item = {
+        type: $("relationType").selectedOptions[0].textContent,
+        r: st.r,
+        r2: st.r2,
+        noise: $("noiseLevel").selectedOptions[0].textContent
+      };
+      if (slot === "A") state.savedA = item;
+      if (slot === "B") state.savedB = item;
+      renderComparison();
+      toast(`Simulación ${slot} guardada.`);
+    }
+
+    function renderAll() {
+      renderTable();
+      renderStats();
+      renderChart();
+      renderInterpretation();
+      renderComparison();
+    }
+
+    function bindEvents() {
+      $("generateBtn").addEventListener("click", generateData);
+      $("heroGenerate").addEventListener("click", generateData);
+      $("dockGenerate").addEventListener("click", generateData);
+      $("newSampleBtn").addEventListener("click", generateData);
+      $("caseBtn").addEventListener("click", loadCase);
+      $("caseHero").addEventListener("click", loadCase);
+      $("clearBtn").addEventListener("click", clearData);
+      $("addRowBtn").addEventListener("click", addRow);
+      $("updateChartBtn").addEventListener("click", updateFromTable);
+      $("dockUpdate").addEventListener("click", updateFromTable);
+      $("pasteBtn").addEventListener("click", loadPastedData);
+      $("saveA").addEventListener("click", () => saveSimulation("A"));
+      $("saveB").addEventListener("click", () => saveSimulation("B"));
+      ["relationType", "xVariable", "noiseLevel", "xMin", "xMax"].forEach((id) => $(id).addEventListener("change", renderAll));
+    }
+
+    bindEvents();
+    loadCase();
+  </script>
+</body>
+</html>

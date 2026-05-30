@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador 5W2H - Mantenimiento Vehicular</title>
+  <style>
+    :root {
+      --blue: #0f6fb6;
+      --blue-dark: #10364d;
+      --green: #16a66a;
+      --orange: #f59e0b;
+      --red: #d94d4d;
+      --ink: #143242;
+      --muted: #617481;
+      --line: #d9e6ec;
+      --card: rgba(255, 255, 255, 0.94);
+      --white: #ffffff;
+      --soft: #f3f8fa;
+      --shadow: 0 18px 48px rgba(17, 55, 76, 0.16);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(245, 158, 11, 0.22), transparent 25rem),
+        radial-gradient(circle at 12% 18%, rgba(22, 166, 106, 0.2), transparent 24rem),
+        linear-gradient(135deg, rgba(238, 247, 251, 0.94), rgba(248, 252, 253, 0.98)),
+        repeating-linear-gradient(90deg, rgba(15, 111, 182, 0.06) 0 2px, transparent 2px 86px);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.5;
+      background:
+        linear-gradient(140deg, transparent 0 55%, rgba(15, 111, 182, 0.14) 55% 56%, transparent 56%),
+        linear-gradient(28deg, transparent 0 64%, rgba(22, 166, 106, 0.14) 64% 65%, transparent 65%);
+      pointer-events: none;
+    }
+
+    button, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .shell {
+      width: min(1220px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 36px;
+    }
+
+    .hero {
+      min-height: 50vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-copy, .hero-visual, .card, .drop-zone, .dock {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-copy {
+      display: grid;
+      align-content: center;
+      padding: clamp(24px, 5vw, 42px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 12ch;
+      margin: 0;
+      color: var(--blue-dark);
+      font-size: clamp(2.45rem, 6vw, 5.5rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 18px 0 26px;
+      color: var(--muted);
+      font-size: 1.14rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions, .button-row, .section-title, .dock, .case-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 15px;
+      border-radius: var(--radius);
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      box-shadow: 0 10px 24px rgba(15, 111, 182, 0.22);
+    }
+
+    .secondary {
+      color: var(--blue-dark);
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+
+    .danger {
+      color: #fff;
+      background: var(--red);
+    }
+
+    .hero-visual {
+      position: relative;
+      min-height: 340px;
+      overflow: hidden;
+      color: #fff;
+      background: linear-gradient(140deg, rgba(15, 111, 182, 0.95), rgba(22, 166, 106, 0.82));
+    }
+
+    .hero-visual::before {
+      content: "🚗";
+      position: absolute;
+      right: 18px;
+      bottom: 0;
+      font-size: clamp(6rem, 16vw, 13rem);
+      opacity: 0.2;
+    }
+
+    .visual-board {
+      position: absolute;
+      inset: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-content: end;
+    }
+
+    .visual-board span {
+      min-height: 72px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.34);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.14);
+      font-size: 1.65rem;
+    }
+
+    main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+    }
+
+    .section-title { margin-bottom: 16px; }
+    .section-title h2 { margin: 0; font-size: 1.22rem; }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border-radius: var(--radius);
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--orange));
+      font-size: 1.18rem;
+    }
+
+    .case-box {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .case-box h3 {
+      margin: 0;
+      color: var(--blue-dark);
+      font-size: 1.35rem;
+    }
+
+    .case-box p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #0b6a43;
+      background: rgba(22, 166, 106, 0.13);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card-bank {
+      display: grid;
+      gap: 10px;
+      min-height: 220px;
+      padding: 14px;
+      border: 1px dashed rgba(15, 111, 182, 0.45);
+      border-radius: var(--radius);
+      background: rgba(15, 111, 182, 0.06);
+    }
+
+    .drag-card {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: var(--radius);
+      background: var(--white);
+      box-shadow: 0 8px 20px rgba(17, 55, 76, 0.08);
+      color: var(--ink);
+      font-weight: 780;
+      line-height: 1.42;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .drag-card:active { cursor: grabbing; }
+    .drag-card.dragging { opacity: 0.55; transform: scale(0.99); }
+
+    .target-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .drop-zone {
+      min-height: 178px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      padding: 14px;
+      background: rgba(255,255,255,0.86);
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    }
+
+    .drop-zone.over {
+      border-color: var(--blue);
+      background: rgba(15, 111, 182, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .drop-zone.correct {
+      border-color: rgba(22, 166, 106, 0.75);
+      background: rgba(22, 166, 106, 0.1);
+    }
+
+    .drop-zone.incorrect {
+      border-color: rgba(217, 77, 77, 0.75);
+      background: rgba(217, 77, 77, 0.1);
+    }
+
+    .zone-head {
+      display: grid;
+      gap: 2px;
+    }
+
+    .zone-head strong {
+      color: var(--blue-dark);
+      font-size: 1.05rem;
+    }
+
+    .zone-head span {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 750;
+    }
+
+    .slot {
+      min-height: 76px;
+      display: grid;
+      align-items: center;
+      padding: 8px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.62);
+    }
+
+    .feedback-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .feedback-item {
+      padding: 13px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--white);
+      line-height: 1.55;
+    }
+
+    .feedback-item.good {
+      border-color: rgba(22, 166, 106, 0.55);
+      background: rgba(22, 166, 106, 0.09);
+    }
+
+    .feedback-item.bad {
+      border-color: rgba(217, 77, 77, 0.55);
+      background: rgba(217, 77, 77, 0.09);
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .score-card {
+      min-height: 94px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .score-card span {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 850;
+    }
+
+    .score-card strong {
+      color: var(--blue-dark);
+      font-size: clamp(1.15rem, 2vw, 1.75rem);
+    }
+
+    .questions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--ink);
+      background: var(--white);
+      font: inherit;
+      line-height: 1.45;
+    }
+
+    .dock {
+      position: sticky;
+      bottom: 12px;
+      z-index: 10;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: min(380px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--blue-dark);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: 0.2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 980px) {
+      .hero, .workspace, .target-grid, .score-grid, .questions {
+        grid-template-columns: 1fr;
+      }
+      .hero { min-height: auto; }
+      .hero-visual { min-height: 280px; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1220px); }
+      .hero-copy, .card { padding: 18px; }
+      .hero-actions, .button-row, .dock { align-items: stretch; flex-direction: column; }
+      .visual-board { grid-template-columns: 1fr; }
+      .visual-board span { min-height: 52px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <section class="hero-copy">
+        <p class="eyebrow">Gestión por procesos | Plan de acción | 5W2H</p>
+        <h1>Simulador 5W2H</h1>
+        <p class="subtitle">Arrastra cada bloque del plan de acción hacia la pregunta correcta y valida tu comprensión de la herramienta.</p>
+        <div class="hero-actions">
+          <button class="button primary" id="heroStart" type="button">📋 Iniciar simulación</button>
+          <button class="button secondary" id="heroCase" type="button">🚗 Cargar nuevo caso</button>
+          <a class="button secondary" href="portal-simuladores-calidad.html">Volver al portal</a>
+        </div>
+      </section>
+      <aside class="hero-visual" aria-label="Visual de plan 5W2H">
+        <div class="visual-board" aria-hidden="true">
+          <span>📋</span><span>⏱️</span><span>👤</span><span>💰</span>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-title"><span class="icon">🚗</span><h2>1. Caso de estudio</h2></div>
+        <div class="case-box">
+          <div class="case-meta">
+            <span class="tag" id="caseTag">Caso</span>
+            <span class="tag">Mantenimiento preventivo</span>
+          </div>
+          <h3 id="caseTitle">Caso</h3>
+          <p><strong>Problema:</strong> <span id="caseProblem"></span></p>
+          <p><strong>Objetivo de mejora:</strong> <span id="caseObjective"></span></p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="card">
+          <div class="section-title"><span class="icon">🧩</span><h2>2. Panel de tarjetas</h2></div>
+          <p style="color:var(--muted); line-height:1.6; margin-top:0">Arrastra cada tarjeta hacia el campo 5W2H que corresponda. Las tarjetas aparecen mezcladas.</p>
+          <div id="cardBank" class="card-bank" aria-label="Tarjetas arrastrables"></div>
+        </article>
+
+        <article class="card">
+          <div class="section-title"><span class="icon">📋</span><h2>3. Panel 5W2H</h2></div>
+          <div id="targetGrid" class="target-grid"></div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">✅</span><h2>4. Retroalimentación automática</h2></div>
+        <div class="score-grid">
+          <div class="score-card"><span>Puntaje obtenido</span><strong id="scoreText">0 / 7</strong></div>
+          <div class="score-card"><span>Porcentaje de acierto</span><strong id="percentText">0%</strong></div>
+          <div class="score-card"><span>Desempeño</span><strong id="performanceText">Sin verificar</strong></div>
+        </div>
+        <div id="feedbackList" class="feedback-list">
+          <div class="feedback-item">Ubica las tarjetas y presiona “Verificar respuestas” para recibir retroalimentación.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">🎓</span><h2>5. Reflexión de aprendizaje</h2></div>
+        <div class="questions">
+          <label>¿Cuál fue el elemento más fácil de identificar?<textarea></textarea></label>
+          <label>¿Qué diferencia hay entre WHAT y HOW?<textarea></textarea></label>
+          <label>¿Por qué es importante definir WHO en un plan de acción?<textarea></textarea></label>
+          <label>¿Qué pasaría si no se estima HOW MUCH?<textarea></textarea></label>
+        </div>
+      </section>
+
+      <section class="dock">
+        <button class="button primary" id="startBtn" type="button">📋 Iniciar simulación</button>
+        <button class="button secondary" id="checkBtn" type="button">✅ Verificar respuestas</button>
+        <button class="button secondary" id="solutionBtn" type="button">👀 Mostrar solución</button>
+        <button class="button secondary" id="newCaseBtn" type="button">🚗 Cargar nuevo caso</button>
+        <button class="button danger" id="resetBtn" type="button">🔄 Reiniciar</button>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const elements = [
+      { key: "what", label: "What", guide: "¿Qué se hará?", explanation: "describe la acción a realizar." },
+      { key: "why", label: "Why", guide: "¿Por qué se hará?", explanation: "explica la razón o justificación." },
+      { key: "where", label: "Where", guide: "¿Dónde se aplicará?", explanation: "indica el lugar, área o proceso donde se aplicará." },
+      { key: "when", label: "When", guide: "¿Cuándo se realizará?", explanation: "define el plazo o momento de ejecución." },
+      { key: "who", label: "Who", guide: "¿Quién será responsable?", explanation: "señala al responsable de ejecutar o liderar la acción." },
+      { key: "how", label: "How", guide: "¿Cómo se realizará?", explanation: "describe el método o mecanismo de ejecución." },
+      { key: "howMuch", label: "How Much", guide: "¿Cuánto costará?", explanation: "estima recursos, presupuesto o costo requerido." }
+    ];
+
+    const cases = [
+      {
+        title: "Caso 1: Alertas de mantenimiento",
+        problem: "La empresa ha detectado que muchos vehículos ingresan tarde al mantenimiento, superando los 5,500 km, lo que incrementa el tiempo de atención, genera reclamos y eleva el costo del servicio.",
+        objective: "Reducir la cantidad de vehículos que ingresan fuera del rango recomendado de mantenimiento.",
+        cards: {
+          what: "Implementar alertas automáticas de mantenimiento.",
+          why: "Porque los vehículos están ingresando después de los 5,500 km.",
+          where: "En el proceso de programación de citas de mantenimiento.",
+          when: "Durante el próximo mes.",
+          who: "Coordinador de mantenimiento preventivo.",
+          how: "Mediante envío de mensajes SMS, WhatsApp y correo electrónico.",
+          howMuch: "S/ 2,500 para configuración del sistema y capacitación."
+        }
+      },
+      {
+        title: "Caso 2: Retrasos en atención",
+        problem: "El tiempo de mantenimiento supera el estándar de 90 minutos, generando esperas prolongadas y menor satisfacción del cliente.",
+        objective: "Reducir el tiempo promedio de mantenimiento y mejorar el flujo de atención en taller.",
+        cards: {
+          what: "Estandarizar la secuencia de actividades del servicio preventivo.",
+          why: "Porque el tiempo de mantenimiento supera el estándar de 90 minutos.",
+          where: "En las bahías de atención rápida del taller.",
+          when: "Durante las próximas cuatro semanas.",
+          who: "Jefe de taller y supervisores de servicio.",
+          how: "Mediante checklist operativo, balanceo de tareas y capacitación al equipo técnico.",
+          howMuch: "S/ 3,800 para capacitación, señalización y actualización de formatos."
+        }
+      },
+      {
+        title: "Caso 3: Repuestos no disponibles",
+        problem: "El mantenimiento se retrasa por falta de repuestos críticos, lo que obliga a reprogramar servicios y aumenta los reclamos.",
+        objective: "Asegurar disponibilidad mínima de repuestos críticos para mantenimientos preventivos.",
+        cards: {
+          what: "Definir stock mínimo de repuestos críticos para mantenimiento preventivo.",
+          why: "Porque la falta de repuestos retrasa la atención y genera reprogramaciones.",
+          where: "En el almacén de repuestos y el área de planificación de servicios.",
+          when: "Antes del cierre del presente trimestre.",
+          who: "Responsable de almacén junto con el planificador de mantenimiento.",
+          how: "Analizando consumo histórico, frecuencia de servicios y tiempos de reposición.",
+          howMuch: "S/ 12,000 como inversión inicial en inventario crítico."
+        }
+      }
+    ];
+
+    const state = {
+      caseIndex: 0,
+      draggedId: null,
+      checked: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message) {
+      const node = $("toast");
+      node.textContent = message;
+      node.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 2500);
+    }
+
+    function shuffle(array) {
+      return [...array].sort(() => Math.random() - 0.5);
+    }
+
+    function currentCase() {
+      return cases[state.caseIndex];
+    }
+
+    function renderCase() {
+      const item = currentCase();
+      $("caseTag").textContent = item.title.split(":")[0];
+      $("caseTitle").textContent = item.title;
+      $("caseProblem").textContent = item.problem;
+      $("caseObjective").textContent = item.objective;
+    }
+
+    function cardTemplate(key, text) {
+      return `<div class="drag-card" draggable="true" id="card-${key}" data-key="${key}">${text}</div>`;
+    }
+
+    function renderCards() {
+      const cards = Object.entries(currentCase().cards).map(([key, text]) => ({ key, text }));
+      $("cardBank").innerHTML = shuffle(cards).map((card) => cardTemplate(card.key, card.text)).join("");
+    }
+
+    function renderTargets() {
+      $("targetGrid").innerHTML = elements.map((item) => `
+        <section class="drop-zone" data-zone="${item.key}">
+          <div class="zone-head">
+            <strong>${item.label}</strong>
+            <span>${item.guide}</span>
+          </div>
+          <div class="slot" data-slot="${item.key}"></div>
+        </section>
+      `).join("");
+    }
+
+    function bindDragAndDrop() {
+      document.querySelectorAll(".drag-card").forEach((card) => {
+        card.addEventListener("dragstart", (event) => {
+          state.draggedId = card.id;
+          card.classList.add("dragging");
+          event.dataTransfer.setData("text/plain", card.id);
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging");
+          state.draggedId = null;
+        });
+      });
+
+      document.querySelectorAll(".drop-zone, .card-bank").forEach((zone) => {
+        zone.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          zone.classList.add("over");
+        });
+        zone.addEventListener("dragleave", () => zone.classList.remove("over"));
+        zone.addEventListener("drop", (event) => {
+          event.preventDefault();
+          zone.classList.remove("over");
+          const cardId = event.dataTransfer.getData("text/plain") || state.draggedId;
+          const card = document.getElementById(cardId);
+          if (!card) return;
+
+          if (zone.classList.contains("card-bank")) {
+            zone.appendChild(card);
+          } else {
+            const slot = zone.querySelector(".slot");
+            const existing = slot.querySelector(".drag-card");
+            if (existing) $("cardBank").appendChild(existing);
+            slot.appendChild(card);
+          }
+          clearValidation();
+        });
+      });
+    }
+
+    function clearValidation() {
+      state.checked = false;
+      document.querySelectorAll(".drop-zone").forEach((zone) => zone.classList.remove("correct", "incorrect"));
+      $("scoreText").textContent = "0 / 7";
+      $("percentText").textContent = "0%";
+      $("performanceText").textContent = "Sin verificar";
+      $("feedbackList").innerHTML = `<div class="feedback-item">Ubica las tarjetas y presiona “Verificar respuestas” para recibir retroalimentación.</div>`;
+    }
+
+    function startSimulation() {
+      state.checked = false;
+      renderCase();
+      renderTargets();
+      renderCards();
+      bindDragAndDrop();
+      clearValidation();
+      toast("Simulación iniciada.");
+    }
+
+    function newCase() {
+      state.caseIndex = (state.caseIndex + 1) % cases.length;
+      startSimulation();
+      toast("Nuevo caso cargado.");
+    }
+
+    function resetCase() {
+      startSimulation();
+      toast("Caso reiniciado.");
+    }
+
+    function verifyAnswers() {
+      let score = 0;
+      const feedback = [];
+
+      elements.forEach((element) => {
+        const zone = document.querySelector(`[data-zone="${element.key}"]`);
+        const card = zone.querySelector(".drag-card");
+        zone.classList.remove("correct", "incorrect");
+
+        if (!card) {
+          zone.classList.add("incorrect");
+          feedback.push(`<div class="feedback-item bad"><strong>Falta respuesta en ${element.label}.</strong> Este campo corresponde a ${element.guide.toLowerCase()}</div>`);
+          return;
+        }
+
+        const selectedKey = card.dataset.key;
+        const selectedText = card.textContent;
+        if (selectedKey === element.key) {
+          score += 1;
+          zone.classList.add("correct");
+          feedback.push(`<div class="feedback-item good"><strong>Correcto:</strong> “${selectedText}” corresponde a ${element.label} porque ${element.explanation}</div>`);
+        } else {
+          const correctElement = elements.find((item) => item.key === selectedKey);
+          zone.classList.add("incorrect");
+          feedback.push(`<div class="feedback-item bad"><strong>Incorrecto:</strong> “${selectedText}” corresponde a ${correctElement.label} porque ${correctElement.explanation}</div>`);
+        }
+      });
+
+      const percent = Math.round((score / elements.length) * 100);
+      $("scoreText").textContent = `${score} / ${elements.length}`;
+      $("percentText").textContent = `${percent}%`;
+      $("performanceText").textContent = performanceMessage(percent);
+      $("feedbackList").innerHTML = feedback.join("");
+      state.checked = true;
+      toast("Respuestas verificadas.");
+    }
+
+    function performanceMessage(percent) {
+      if (percent >= 90) return "Excelente";
+      if (percent >= 60) return "Bueno";
+      return "En proceso";
+    }
+
+    function showSolution() {
+      elements.forEach((element) => {
+        const card = document.querySelector(`.drag-card[data-key="${element.key}"]`);
+        const slot = document.querySelector(`[data-slot="${element.key}"]`);
+        if (card && slot) {
+          const existing = slot.querySelector(".drag-card");
+          if (existing && existing !== card) $("cardBank").appendChild(existing);
+          slot.appendChild(card);
+        }
+      });
+      verifyAnswers();
+      toast("Solución mostrada.");
+    }
+
+    function bindButtons() {
+      $("startBtn").addEventListener("click", startSimulation);
+      $("heroStart").addEventListener("click", startSimulation);
+      $("checkBtn").addEventListener("click", verifyAnswers);
+      $("resetBtn").addEventListener("click", resetCase);
+      $("solutionBtn").addEventListener("click", showSolution);
+      $("newCaseBtn").addEventListener("click", newCase);
+      $("heroCase").addEventListener("click", newCase);
+    }
+
+    bindButtons();
+    startSimulation();
+  </script>
+</body>
+</html>
