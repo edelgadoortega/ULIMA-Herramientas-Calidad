@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador Six Sigma - Mantenimiento Vehicular</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --blue: #0f6fb6;
+      --blue-dark: #10364d;
+      --green: #16a66a;
+      --purple: #7c3aed;
+      --orange: #f59e0b;
+      --yellow: #eab308;
+      --red: #d94d4d;
+      --ink: #132f3f;
+      --muted: #617481;
+      --line: #d9e6ec;
+      --card: rgba(255, 255, 255, 0.94);
+      --white: #fff;
+      --shadow: 0 18px 48px rgba(17, 55, 76, 0.16);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 84% 12%, rgba(124, 58, 237, 0.19), transparent 24rem),
+        radial-gradient(circle at 12% 18%, rgba(22, 166, 106, 0.19), transparent 24rem),
+        linear-gradient(135deg, rgba(238, 247, 251, 0.94), rgba(248, 252, 253, 0.98)),
+        repeating-linear-gradient(90deg, rgba(15, 111, 182, 0.06) 0 2px, transparent 2px 86px);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: .48;
+      background:
+        linear-gradient(140deg, transparent 0 56%, rgba(15,111,182,.14) 56% 57%, transparent 57%),
+        linear-gradient(28deg, transparent 0 64%, rgba(124,58,237,.14) 64% 65%, transparent 65%);
+      pointer-events: none;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .shell {
+      width: min(1240px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 36px;
+    }
+
+    .hero {
+      min-height: 54vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-copy, .hero-visual, .card, .dock {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-copy {
+      display: grid;
+      align-content: center;
+      padding: clamp(24px, 5vw, 42px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--purple);
+      font-size: .82rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 12ch;
+      margin: 0;
+      color: var(--blue-dark);
+      font-size: clamp(2.45rem, 6vw, 5.55rem);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 18px 0 26px;
+      color: var(--muted);
+      font-size: 1.14rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions, .button-row, .section-title, .dock, .sigma-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 44px;
+      padding: 10px 15px;
+      border-radius: var(--radius);
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      box-shadow: 0 10px 24px rgba(15, 111, 182, .22);
+    }
+
+    .secondary {
+      color: var(--blue-dark);
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+
+    .danger { color: #fff; background: var(--red); }
+
+    .hero-visual {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+      color: #fff;
+      background: linear-gradient(140deg, rgba(15,111,182,.95), rgba(124,58,237,.8));
+    }
+
+    .hero-visual::before {
+      content: "🚗";
+      position: absolute;
+      right: 20px;
+      bottom: -8px;
+      font-size: clamp(6rem, 16vw, 13rem);
+      opacity: .18;
+    }
+
+    .gauge {
+      position: absolute;
+      inset: 24px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 16px;
+      border: 1px solid rgba(255,255,255,.32);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.13);
+    }
+
+    .gauge strong {
+      font-size: clamp(3rem, 8vw, 6rem);
+      line-height: 1;
+    }
+
+    main { display: grid; gap: 18px; }
+    .card { padding: 22px; }
+    .section-title { margin-bottom: 16px; }
+    .section-title h2 { margin: 0; font-size: 1.22rem; }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border-radius: var(--radius);
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      font-size: 1.18rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: .9rem;
+      font-weight: 800;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--ink);
+      background: var(--white);
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(15,111,182,.12);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat, .scenario {
+      min-height: 102px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .stat span, .scenario span {
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 850;
+    }
+
+    .stat strong {
+      color: var(--blue-dark);
+      font-size: clamp(1.05rem, 1.9vw, 1.55rem);
+      overflow-wrap: anywhere;
+    }
+
+    .chart-box {
+      height: 520px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    .chart-box.small { height: 450px; }
+    .chart-box canvas { width: 100% !important; height: 100% !important; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .sigma-badge {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--white);
+      font-weight: 850;
+    }
+
+    .sigma-badge.active {
+      color: #fff;
+      background: var(--purple);
+      box-shadow: 0 0 0 5px rgba(124,58,237,.16), 0 0 28px rgba(124,58,237,.5);
+    }
+
+    .interpretation {
+      margin: 0;
+      padding: 18px;
+      border-left: 5px solid var(--green);
+      border-radius: var(--radius);
+      background: rgba(22,166,106,.1);
+      line-height: 1.65;
+    }
+
+    .comparison-table {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--white);
+    }
+
+    table { width: 100%; min-width: 640px; border-collapse: collapse; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--blue-dark); background: #eef6fa; }
+
+    .questions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
+
+    .dock {
+      position: sticky;
+      bottom: 12px;
+      z-index: 10;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: min(380px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--blue-dark);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 980px) {
+      .hero, .two-col, .grid, .stats-grid, .questions { grid-template-columns: 1fr; }
+      .hero { min-height: auto; }
+      .hero-visual { min-height: 300px; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1240px); }
+      .hero-copy, .card { padding: 18px; }
+      .button-row, .hero-actions, .dock { align-items: stretch; flex-direction: column; }
+      .chart-box { height: 430px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <section class="hero-copy">
+        <p class="eyebrow">Six Sigma | Control estadístico | Gestión por procesos</p>
+        <h1>Simulador Six Sigma</h1>
+        <p class="subtitle">Comprende cómo la variabilidad del kilometraje de ingreso al mantenimiento afecta el nivel Sigma, el yield y los defectos por millón de oportunidades.</p>
+        <div class="hero-actions">
+          <button class="button primary" id="heroGenerate" type="button">📊 Generar simulación</button>
+          <button class="button secondary" id="heroLow" type="button">✅ Baja variabilidad</button>
+          <a class="button secondary" href="portal-simuladores-calidad.html">Volver al portal</a>
+        </div>
+      </section>
+      <aside class="hero-visual" aria-label="Visual Six Sigma">
+        <div class="gauge">
+          <span>🚗 mantenimiento preventivo</span>
+          <strong id="heroSigma">0.0σ</strong>
+          <span>mientras menor variabilidad, mayor nivel Sigma</span>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-title"><span class="icon">⚙️</span><h2>1. Panel de configuración</h2></div>
+        <div class="grid">
+          <label>Media objetivo (km)<input id="targetMean" type="number" value="5000" step="1"></label>
+          <label>Desviación estándar<input id="sigmaInput" type="number" value="50" min="1" step="1"></label>
+          <label>Tamaño de muestra<input id="sampleSize" type="number" value="100" min="5" max="1000" step="1"></label>
+          <label>LIE<input id="lowerSpec" type="number" value="4800" step="1"></label>
+          <label>LSE<input id="upperSpec" type="number" value="5200" step="1"></label>
+          <label>Media real simulada<input id="processMean" type="number" value="5000" step="1"></label>
+        </div>
+        <div class="button-row" style="margin-top:16px">
+          <button class="button primary" id="generateBtn" type="button">📊 Generar simulación</button>
+          <button class="button secondary" id="newSampleBtn" type="button">🎲 Nueva muestra aleatoria</button>
+          <button class="button secondary" id="lowVarBtn" type="button">✅ Baja variabilidad</button>
+          <button class="button secondary" id="midVarBtn" type="button">⚙️ Variabilidad media</button>
+          <button class="button secondary" id="highVarBtn" type="button">⚠️ Alta variabilidad</button>
+          <button class="button danger" id="resetBtn" type="button">🔄 Reiniciar</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">📈</span><h2>2. Dashboard estadístico</h2></div>
+        <div class="stats-grid">
+          <div class="stat"><span>Observaciones</span><strong id="nStat">0</strong></div>
+          <div class="stat"><span>Media</span><strong id="meanStat">0</strong></div>
+          <div class="stat"><span>Mediana</span><strong id="medianStat">0</strong></div>
+          <div class="stat"><span>Moda aprox.</span><strong id="modeStat">0</strong></div>
+          <div class="stat"><span>Desv. estándar</span><strong id="stdStat">0</strong></div>
+          <div class="stat"><span>Mínimo / Máximo</span><strong id="minMaxStat">0 / 0</strong></div>
+          <div class="stat"><span>Rango</span><strong id="rangeStat">0</strong></div>
+          <div class="stat"><span>Coef. variación</span><strong id="cvStat">0%</strong></div>
+          <div class="stat"><span>Sigma calculado</span><strong id="sigmaStat">0σ</strong></div>
+          <div class="stat"><span>DPMO aproximado</span><strong id="dpmoStat">0</strong></div>
+          <div class="stat"><span>Yield aproximado</span><strong id="yieldStat">0%</strong></div>
+          <div class="stat"><span>Fuera de especificación</span><strong id="defectStat">0%</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">σ</span><h2>3. Gráfico comparativo Six Sigma</h2></div>
+        <div class="sigma-badges" id="sigmaBadges" style="margin-bottom:14px"></div>
+        <div class="chart-box"><canvas id="sixSigmaChart"></canvas></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">📊</span><h2>4. Histograma complementario</h2></div>
+        <div class="chart-box small"><canvas id="histogramChart"></canvas></div>
+      </section>
+
+      <section class="two-col">
+        <article class="card">
+          <div class="section-title"><span class="icon">💡</span><h2>5. Interpretación automática</h2></div>
+          <p id="interpretation" class="interpretation">Genera una simulación para interpretar el nivel Sigma del proceso.</p>
+        </article>
+
+        <article class="card">
+          <div class="section-title"><span class="icon">⚖️</span><h2>6. Comparador de escenarios</h2></div>
+          <div class="button-row" style="margin-bottom:14px">
+            <button class="button secondary" id="saveA" type="button">Guardar escenario A</button>
+            <button class="button secondary" id="saveB" type="button">Guardar escenario B</button>
+          </div>
+          <div class="comparison-table">
+            <table>
+              <thead><tr><th>Indicador</th><th>Escenario A</th><th>Escenario B</th></tr></thead>
+              <tbody id="comparisonBody"></tbody>
+            </table>
+          </div>
+          <p id="comparisonComment" class="interpretation" style="margin-top:14px">Guarda dos escenarios para comparar desempeño, variabilidad y defectos.</p>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title"><span class="icon">🎓</span><h2>7. Actividad de aprendizaje</h2></div>
+        <div class="questions">
+          <label>¿Qué ocurre con la curva cuando aumenta la desviación estándar?<textarea></textarea></label>
+          <label>¿Por qué una curva Six Sigma es más estrecha?<textarea></textarea></label>
+          <label>¿Qué significa que un proceso esté en 2 Sigma?<textarea></textarea></label>
+          <label>¿Qué acciones implementarías para reducir la variabilidad?<textarea></textarea></label>
+          <label>¿Cómo afecta la variabilidad al mantenimiento preventivo?<textarea></textarea></label>
+        </div>
+      </section>
+
+      <section class="dock">
+        <button class="button primary" id="dockGenerate" type="button">📊 Generar simulación</button>
+        <button class="button secondary" id="dockLow" type="button">✅ Baja variabilidad</button>
+        <a class="button secondary" href="portal-simuladores-calidad.html">Volver al portal</a>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Simulador Six Sigma educativo.
+    // Cada dato generado representa el kilometraje real de ingreso al mantenimiento preventivo.
+    const state = {
+      data: [],
+      sixChart: null,
+      histChart: null,
+      scenarioA: null,
+      scenarioB: null
+    };
+
+    const sigmaColors = {
+      1: "#d94d4d",
+      2: "#f59e0b",
+      3: "#eab308",
+      4: "#16a66a",
+      5: "#0f6fb6",
+      6: "#7c3aed"
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message) {
+      const node = $("toast");
+      node.textContent = message;
+      node.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 2500);
+    }
+
+    function config() {
+      const lie = Number($("lowerSpec").value);
+      const lse = Number($("upperSpec").value);
+      return {
+        targetMean: Number($("targetMean").value),
+        processMean: Number($("processMean").value),
+        sigma: Math.max(1, Number($("sigmaInput").value)),
+        sample: Math.max(5, Math.round(Number($("sampleSize").value))),
+        lie: Math.min(lie, lse - 1),
+        lse: Math.max(lse, lie + 1)
+      };
+    }
+
+    // Box-Muller: transforma números aleatorios uniformes en una observación normal.
+    function generarNormal(media, sigma) {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return media + sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function generateSimulation() {
+      const cfg = config();
+      state.data = Array.from({ length: cfg.sample }, () => Math.round(generarNormal(cfg.processMean, cfg.sigma)));
+      renderAll();
+      toast("Simulación generada.");
+    }
+
+    function setVariability(sigma) {
+      $("sigmaInput").value = sigma;
+      $("processMean").value = $("targetMean").value;
+      generateSimulation();
+    }
+
+    function resetSimulation() {
+      $("targetMean").value = 5000;
+      $("processMean").value = 5000;
+      $("sigmaInput").value = 50;
+      $("sampleSize").value = 100;
+      $("lowerSpec").value = 4800;
+      $("upperSpec").value = 5200;
+      generateSimulation();
+    }
+
+    function mean(values) {
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function sampleStd(values) {
+      if (values.length < 2) return 0;
+      const avg = mean(values);
+      return Math.sqrt(values.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / (values.length - 1));
+    }
+
+    function median(values) {
+      const sorted = [...values].sort((a, b) => a - b);
+      const n = sorted.length;
+      return n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    }
+
+    function histogram(values, binsCount = 12) {
+      if (!values.length) return { bins: [], mode: "0", width: 1 };
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const width = Math.max(1, Math.ceil((max - min || 1) / binsCount));
+      const bins = Array.from({ length: binsCount }, (_, i) => ({
+        start: min + i * width,
+        end: i === binsCount - 1 ? max : min + (i + 1) * width,
+        mid: min + i * width + width / 2,
+        count: 0
+      }));
+      values.forEach((value) => {
+        const index = Math.min(binsCount - 1, Math.max(0, Math.floor((value - min) / width)));
+        bins[index].count += 1;
+      });
+      const modal = [...bins].sort((a, b) => b.count - a.count)[0];
+      return { bins, width, mode: `${Math.round(modal.start)} - ${Math.round(modal.end)} km` };
+    }
+
+    function normalPdf(x, mu, sigma) {
+      return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+    }
+
+    function erf(x) {
+      // Aproximación numérica suficiente para calcular probabilidades normales educativas.
+      const sign = x >= 0 ? 1 : -1;
+      x = Math.abs(x);
+      const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+      const p = 0.3275911;
+      const t = 1 / (1 + p * x);
+      const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return sign * y;
+    }
+
+    function normalCdf(x, mu, sigma) {
+      return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
+    }
+
+    function metrics() {
+      if (state.data.length < 2) return null;
+      const cfg = config();
+      const avg = mean(state.data);
+      const std = sampleStd(state.data);
+      const sigLower = (avg - cfg.lie) / std;
+      const sigUpper = (cfg.lse - avg) / std;
+      const sigmaLevel = Math.max(0, Math.min(sigLower, sigUpper));
+      const defectProbability = normalCdf(cfg.lie, avg, std) + (1 - normalCdf(cfg.lse, avg, std));
+      const dpmo = defectProbability * 1000000;
+      const yieldValue = 1 - defectProbability;
+      const defects = state.data.filter((value) => value < cfg.lie || value > cfg.lse).length;
+      return {
+        n: state.data.length,
+        mean: avg,
+        median: median(state.data),
+        std,
+        min: Math.min(...state.data),
+        max: Math.max(...state.data),
+        range: Math.max(...state.data) - Math.min(...state.data),
+        cv: std / avg,
+        mode: histogram(state.data).mode,
+        sigmaLevel,
+        sigLower,
+        sigUpper,
+        dpmo,
+        yieldValue,
+        defectPct: defects / state.data.length
+      };
+    }
+
+    function fmt(value, decimals = 1) {
+      if (!Number.isFinite(value)) return "0";
+      return value.toLocaleString("es-PE", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+    }
+
+    function activeSigmaLevel(sigmaLevel) {
+      return Math.max(1, Math.min(6, Math.round(sigmaLevel)));
+    }
+
+    function renderStats() {
+      const m = metrics();
+      if (!m) return;
+      $("nStat").textContent = m.n;
+      $("meanStat").textContent = `${fmt(m.mean, 1)} km`;
+      $("medianStat").textContent = `${fmt(m.median, 1)} km`;
+      $("modeStat").textContent = m.mode;
+      $("stdStat").textContent = `${fmt(m.std, 1)} km`;
+      $("minMaxStat").textContent = `${Math.round(m.min)} / ${Math.round(m.max)}`;
+      $("rangeStat").textContent = `${Math.round(m.range)} km`;
+      $("cvStat").textContent = `${fmt(m.cv * 100, 2)}%`;
+      $("sigmaStat").textContent = `${fmt(m.sigmaLevel, 2)}σ`;
+      $("dpmoStat").textContent = fmt(m.dpmo, 0);
+      $("yieldStat").textContent = `${fmt(m.yieldValue * 100, 3)}%`;
+      $("defectStat").textContent = `${fmt(m.defectPct * 100, 1)}%`;
+      $("heroSigma").textContent = `${fmt(m.sigmaLevel, 1)}σ`;
+    }
+
+    function renderBadges() {
+      const m = metrics();
+      const active = m ? activeSigmaLevel(m.sigmaLevel) : 1;
+      $("sigmaBadges").innerHTML = [1,2,3,4,5,6].map((level) =>
+        `<span class="sigma-badge ${level === active ? "active" : ""}" style="border-color:${sigmaColors[level]}">${level}σ</span>`
+      ).join("");
+    }
+
+    function sixSigmaDatasets() {
+      const cfg = config();
+      const specHalfWidth = (cfg.lse - cfg.lie) / 2;
+      const minX = cfg.targetMean - specHalfWidth * 1.45;
+      const maxX = cfg.targetMean + specHalfWidth * 1.45;
+      const xs = Array.from({ length: 180 }, (_, i) => minX + (i / 179) * (maxX - minX));
+      const m = metrics();
+      const active = m ? activeSigmaLevel(m.sigmaLevel) : 1;
+
+      const reference = [1,2,3,4,5,6].map((level) => {
+        const sigma = specHalfWidth / level;
+        return {
+          type: "line",
+          label: `${level}σ referencia`,
+          data: xs.map((x) => ({ x, y: normalPdf(x, cfg.targetMean, sigma) })),
+          borderColor: sigmaColors[level],
+          backgroundColor: sigmaColors[level] + "20",
+          borderWidth: level === active ? 5 : 2,
+          pointRadius: 0,
+          tension: .25,
+          fill: false
+        };
+      });
+
+      if (m) {
+        reference.push({
+          type: "line",
+          label: "Proceso simulado",
+          data: xs.map((x) => ({ x, y: normalPdf(x, m.mean, m.std) })),
+          borderColor: "#111827",
+          backgroundColor: "rgba(17,24,39,.12)",
+          borderWidth: 5,
+          pointRadius: 0,
+          tension: .25,
+          fill: false
+        });
+      }
+      return reference;
+    }
+
+    const verticalLinesPlugin = {
+      id: "verticalLines",
+      afterDatasetsDraw(chart, args, options) {
+        const refs = options.refs || [];
+        const xScale = chart.scales.x;
+        const area = chart.chartArea;
+        const ctx = chart.ctx;
+        if (!xScale || !area) return;
+        ctx.save();
+        refs.forEach((ref) => {
+          const x = xScale.getPixelForValue(ref.value);
+          if (x < area.left || x > area.right) return;
+          ctx.beginPath();
+          ctx.moveTo(x, area.top);
+          ctx.lineTo(x, area.bottom);
+          ctx.strokeStyle = ref.color;
+          ctx.lineWidth = ref.width || 2;
+          ctx.setLineDash(ref.dash || []);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = ref.color;
+          ctx.font = "700 11px system-ui";
+          ctx.translate(x + 4, area.top + 12);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillText(ref.label, 0, 0);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        });
+        ctx.restore();
+      }
+    };
+
+    Chart.register(verticalLinesPlugin);
+
+    function renderSixSigmaChart() {
+      if (!window.Chart) return;
+      const cfg = config();
+      const refs = [
+        { value: cfg.lie, label: "LIE", color: "#d94d4d", dash: [5,4] },
+        { value: cfg.lse, label: "LSE", color: "#d94d4d", dash: [5,4] },
+        { value: cfg.targetMean, label: "Objetivo", color: "#7c3aed", width: 3 }
+      ];
+      if (state.sixChart) state.sixChart.destroy();
+      state.sixChart = new Chart($("sixSigmaChart"), {
+        type: "line",
+        data: { datasets: sixSigmaDatasets() },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          parsing: false,
+          plugins: {
+            legend: { position: "bottom" },
+            verticalLines: { refs }
+          },
+          scales: {
+            x: { type: "linear", title: { display: true, text: "Kilometraje de ingreso al mantenimiento" } },
+            y: { title: { display: true, text: "Densidad normal" }, ticks: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderHistogramChart() {
+      if (!window.Chart) return;
+      const cfg = config();
+      const m = metrics();
+      if (!m) return;
+      const hist = histogram(state.data, 14);
+      const labels = hist.bins.map((bin) => `${Math.round(bin.start)}-${Math.round(bin.end)}`);
+      const counts = hist.bins.map((bin) => bin.count);
+      const curve = hist.bins.map((bin) => normalPdf(bin.mid, m.mean, m.std) * state.data.length * hist.width);
+      const refs = [
+        { value: cfg.lie, label: "LIE", color: "#d94d4d", dash: [5,4] },
+        { value: cfg.lse, label: "LSE", color: "#d94d4d", dash: [5,4] },
+        { value: m.mean, label: "Media", color: "#7c3aed", width: 3 },
+        { value: m.mean - m.std, label: "-1σ", color: "#f59e0b" },
+        { value: m.mean + m.std, label: "+1σ", color: "#f59e0b" },
+        { value: m.mean - 2 * m.std, label: "-2σ", color: "#f59e0b", dash: [3,4] },
+        { value: m.mean + 2 * m.std, label: "+2σ", color: "#f59e0b", dash: [3,4] },
+        { value: m.mean - 3 * m.std, label: "-3σ", color: "#f59e0b", dash: [2,5] },
+        { value: m.mean + 3 * m.std, label: "+3σ", color: "#f59e0b", dash: [2,5] }
+      ];
+
+      if (state.histChart) state.histChart.destroy();
+      state.histChart = new Chart($("histogramChart"), {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: "bar",
+              label: "Frecuencia",
+              data: counts,
+              backgroundColor: hist.bins.map((bin) => bin.end < cfg.lie || bin.start > cfg.lse ? "rgba(217,77,77,.78)" : "rgba(15,111,182,.78)"),
+              borderRadius: 6
+            },
+            {
+              type: "line",
+              label: "Curva normal del proceso",
+              data: curve,
+              borderColor: "#111827",
+              borderWidth: 3,
+              pointRadius: 0,
+              tension: .25
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" }, verticalLines: { refs } },
+          scales: {
+            x: { title: { display: true, text: "Intervalos de kilometraje" } },
+            y: { beginAtZero: true, title: { display: true, text: "Frecuencia" }, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+
+    function renderInterpretation() {
+      const m = metrics();
+      if (!m) return;
+      let message;
+      if (m.sigmaLevel < 2) {
+        message = "El proceso presenta alta variabilidad y una gran proporción de vehículos puede ingresar fuera del rango esperado. Se recomienda revisar la programación de citas, alertas y seguimiento preventivo.";
+      } else if (m.sigmaLevel < 3.5) {
+        message = "El proceso tiene un desempeño aceptable para iniciar control, pero aún existen oportunidades importantes de mejora para reducir dispersión y defectos.";
+      } else if (m.sigmaLevel < 5.5) {
+        message = "El proceso muestra buen control de variabilidad. La mayoría de vehículos ingresa dentro del rango de especificación, aunque todavía puede buscarse mayor robustez.";
+      } else {
+        message = "El proceso presenta variabilidad extremadamente baja y un desempeño cercano a clase mundial. Mantener estandarización, monitoreo y acciones preventivas.";
+      }
+      $("interpretation").textContent =
+        `Nivel Sigma calculado: ${fmt(m.sigmaLevel, 2)}σ. Sigma inferior: ${fmt(m.sigLower, 2)}, sigma superior: ${fmt(m.sigUpper, 2)}. ` +
+        `Yield aproximado: ${fmt(m.yieldValue * 100, 3)}% y DPMO aproximado: ${fmt(m.dpmo, 0)}. ${message}`;
+    }
+
+    function scenarioSnapshot() {
+      const m = metrics();
+      if (!m) return null;
+      return { sigma: m.sigmaLevel, std: m.std, yieldValue: m.yieldValue, dpmo: m.dpmo };
+    }
+
+    function saveScenario(slot) {
+      const snap = scenarioSnapshot();
+      if (!snap) return toast("Genera una simulación antes de guardar.");
+      if (slot === "A") state.scenarioA = snap;
+      if (slot === "B") state.scenarioB = snap;
+      renderComparison();
+      toast(`Escenario ${slot} guardado.`);
+    }
+
+    function valueFor(scenario, key) {
+      if (!scenario) return "-";
+      if (key === "sigma") return `${fmt(scenario.sigma, 2)}σ`;
+      if (key === "std") return `${fmt(scenario.std, 1)} km`;
+      if (key === "yield") return `${fmt(scenario.yieldValue * 100, 3)}%`;
+      if (key === "dpmo") return fmt(scenario.dpmo, 0);
+      return "-";
+    }
+
+    function renderComparison() {
+      const rows = [
+        ["Sigma", "sigma"],
+        ["Desviación estándar", "std"],
+        ["Yield", "yield"],
+        ["DPMO", "dpmo"]
+      ];
+      $("comparisonBody").innerHTML = rows.map(([label, key]) =>
+        `<tr><td>${label}</td><td>${valueFor(state.scenarioA, key)}</td><td>${valueFor(state.scenarioB, key)}</td></tr>`
+      ).join("");
+      if (state.scenarioA && state.scenarioB) {
+        const better = state.scenarioA.sigma >= state.scenarioB.sigma ? "A" : "B";
+        const other = better === "A" ? "B" : "A";
+        $("comparisonComment").textContent = `El escenario ${better} tiene mayor nivel Sigma que el escenario ${other}; por tanto, presenta menor variabilidad relativa, mayor yield y menor DPMO aproximado.`;
+      }
+    }
+
+    function renderAll() {
+      renderStats();
+      renderBadges();
+      renderSixSigmaChart();
+      renderHistogramChart();
+      renderInterpretation();
+      renderComparison();
+    }
+
+    function bindEvents() {
+      $("generateBtn").addEventListener("click", generateSimulation);
+      $("heroGenerate").addEventListener("click", generateSimulation);
+      $("dockGenerate").addEventListener("click", generateSimulation);
+      $("newSampleBtn").addEventListener("click", generateSimulation);
+      $("lowVarBtn").addEventListener("click", () => setVariability(20));
+      $("heroLow").addEventListener("click", () => setVariability(20));
+      $("dockLow").addEventListener("click", () => setVariability(20));
+      $("midVarBtn").addEventListener("click", () => setVariability(100));
+      $("highVarBtn").addEventListener("click", () => setVariability(500));
+      $("resetBtn").addEventListener("click", resetSimulation);
+      $("saveA").addEventListener("click", () => saveScenario("A"));
+      $("saveB").addEventListener("click", () => saveScenario("B"));
+      ["targetMean", "processMean", "sigmaInput", "sampleSize", "lowerSpec", "upperSpec"].forEach((id) => {
+        $(id).addEventListener("input", () => {
+          if (state.data.length) renderAll();
+        });
+      });
+    }
+
+    bindEvents();
+    generateSimulation();
+  </script>
+</body>
+</html>
